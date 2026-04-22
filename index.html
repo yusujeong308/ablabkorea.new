@@ -1,0 +1,3987 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>통합 지도</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: Arial, sans-serif; background: #f8f9fb; }
+    body { display: flex; flex-direction: column; }
+    .topbar { display: flex; gap: 10px; padding: 14px; background: #fff; border-bottom: 1px solid #e5e5e5; position: sticky; top: 0; z-index: 100; }
+    .tab-btn { appearance: none; border: none; border-radius: 10px; background: #e9ecef; color: #222; padding: 10px 16px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .tab-btn.active { background: #222; color: #fff; }
+    .frame-wrap { flex: 1; min-height: 0; }
+    .map-frame { width: 100%; height: 100%; border: none; display: none; background: #fff; }
+    .map-frame.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <button type="button" id="tab2" class="tab-btn active" onclick="showMap('map2')">2번 지도</button>
+    <button type="button" id="tab1" class="tab-btn" onclick="showMap('map1')">1번 지도</button>
+  </div>
+
+  <div class="frame-wrap">
+    <iframe id="map2" class="map-frame active" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot; /&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; /&gt;
+  &lt;title&gt;ABLAB 매장 거래처 지도&lt;/title&gt;
+  &lt;style&gt;
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #f8f9fb;
+    }
+
+    body { min-height: 100vh; }
+
+    .layout {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 390px;
+      min-width: 390px;
+      background: #fff;
+      border-right: 1px solid #e5e5e5;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.3s ease, min-width 0.3s ease, height 0.3s ease;
+    }
+
+    .sidebar.collapsed {
+      width: 0;
+      min-width: 0;
+      border-right: none;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 20px 16px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .sidebar-title {
+      margin: 0 0 14px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+    }
+
+    .search-box button,
+    .filter-actions button,
+    .route-actions button,
+    .selected-actions button,
+    .roadview-header button,
+    .roadview-toolbar button,
+    .marker-legend-close,
+    .marker-legend-toggle {
+      padding: 10px 14px;
+      font-size: 14px;
+      border: none;
+      background: #222;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .filter-full {
+      grid-column: 1 / -1;
+    }
+
+    .filter-box select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .filter-actions,
+    .selected-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-actions button.secondary,
+    .route-actions button.secondary,
+    .selected-actions button.secondary {
+      background: #e9ecef;
+      color: #222;
+    }
+
+    .route-box {
+      padding: 14px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fffdf7;
+      flex-shrink: 0;
+    }
+
+    .route-box h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .route-row {
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 4px;
+      color: #444;
+    }
+
+    .route-label {
+      display: inline-block;
+      width: 52px;
+      font-weight: 700;
+      color: #222;
+    }
+
+    .route-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: nowrap;
+    }
+
+    .route-actions button {
+      width: calc(50% - 4px);
+    }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      scroll-behavior: smooth;
+    }
+
+    .selected-store {
+      padding: 16px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fafafa;
+      min-height: 250px;
+      flex-shrink: 0;
+    }
+
+    .selected-store h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .selected-store .row {
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .selected-store .label {
+      display: inline-block;
+      width: 72px;
+      font-weight: 700;
+      color: #333;
+      vertical-align: top;
+    }
+
+    .store-list {
+      flex: none;
+      overflow: visible;
+      padding: 8px;
+    }
+
+    .store-item {
+      padding: 12px;
+      border: 1px solid #ececec;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+      background: #fff;
+    }
+
+    .store-item:hover {
+      background: #f7f7f7;
+    }
+
+    .store-item.active {
+      border-color: #222;
+      background: #f3f3f3;
+    }
+
+    .store-item-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .store-item-address {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+
+    .store-item-detail-address {
+      font-size: 12px;
+      color: #777;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+
+    .store-item-meta {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .map-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #f1f3f5;
+    }
+
+    .sidebar-toggle {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 20;
+      padding: 10px 14px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #222;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      min-width: 84px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .top-buttons {
+      position: absolute;
+      top: 20px;
+      right: 45px;
+      display: flex;
+      gap: 12px;
+      z-index: 20;
+    }
+
+    .top-buttons button {
+      padding: 10px 14px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #222;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      min-width: 90px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .roadview-pick-btn.active,
+    .pin-mode-btn.active {
+      background: #0b63ce;
+    }
+
+    .roadview-wrap {
+      position: absolute;
+      top: 70px;
+      right: 20px;
+      width: 420px;
+      height: 320px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      z-index: 20;
+      display: none;
+    }
+
+    .roadview-wrap.open {
+      display: block;
+    }
+
+    .roadview-wrap.expanded {
+      top: 70px;
+      left: 20px;
+      right: 20px;
+      width: auto;
+      height: calc(100% - 90px);
+    }
+
+    .roadview-header {
+      height: 44px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .roadview-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .roadview-header button,
+    .roadview-toolbar button {
+      width: auto;
+      padding: 6px 10px;
+    }
+
+    #roadview {
+      width: 100%;
+      height: calc(100% - 44px);
+    }
+
+    .info-box {
+      padding: 16px;
+      padding-right: 42px;
+      width: 300px;
+      max-width: calc(100vw - 48px);
+      line-height: 1.8;
+      font-size: 14px;
+      word-break: keep-all;
+      position: relative;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    .info-box h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .info-box strong {
+      display: inline-block;
+      width: 70px;
+      vertical-align: top;
+    }
+
+    .info-window-close {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: #666;
+      font-size: 18px;
+      line-height: 24px;
+      text-align: center;
+      cursor: pointer;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      z-index: 5;
+    }
+
+    .info-window-close:hover {
+      color: #111;
+    }
+
+    .roadview-picker-pin {
+      width: 26px;
+      height: 38px;
+      background: url(&quot;https://t1.daumcdn.net/localimg/localimages/07/2018/pc/roadview_minimap_wk_2018.png&quot;) no-repeat;
+      background-position: -122px 0;
+      transform: translate(-13px, -36px);
+      pointer-events: none;
+    }
+
+    .marker-legend {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      z-index: 20;
+      width: 168px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+    }
+
+    .marker-legend.hidden {
+      display: none;
+    }
+
+    .marker-legend-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #fafafa;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .marker-legend-close {
+      background: #e9ecef;
+      color: #222;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .marker-legend-list {
+      padding: 10px 12px;
+    }
+
+    .marker-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .marker-legend-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .marker-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      flex-shrink: 0;
+    }
+
+    .marker-legend-toggle {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      z-index: 20;
+      font-size: 13px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    }
+
+    .status-top {
+      padding: 14px 16px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 1.45;
+      word-break: keep-all;
+    }
+
+    .status-open {
+      background: #e6f4ea;
+      color: #2f9e44;
+    }
+
+    .status-break {
+      background: #fff4e6;
+      color: #f08c00;
+    }
+
+    .status-closed {
+      background: #ffe3e3;
+      color: #e03131;
+    }
+
+    .status-empty {
+      background: #f8f0e8;
+      color: #8b5e3c;
+    }
+
+    .status-sub {
+      font-size: 15px;
+      font-weight: 700;
+      margin-top: 0;
+    }
+
+    @media (max-width: 768px) {
+      html, body { height: auto; }
+
+      .layout {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .map-wrap {
+        order: 1;
+        width: 100%;
+        height: 56dvh;
+        min-height: 380px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        order: 2;
+        width: 100%;
+        min-width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e5e5e5;
+      }
+
+      .sidebar.collapsed {
+        width: 100%;
+        min-width: 100%;
+        height: 0;
+        min-height: 0;
+        border-bottom: none;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        min-height: 380px;
+      }
+
+      .info-box {
+        width: min(230px, calc(100vw - 36px));
+        padding: 10px;
+        padding-right: 34px;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .info-box h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+
+      .info-box strong { width: 54px; }
+
+      .info-window-close {
+        top: 8px;
+        right: 8px;
+        width: 22px;
+        height: 22px;
+        font-size: 16px;
+        line-height: 22px;
+      }
+
+      .search-box {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .selected-store { min-height: auto; }
+
+      .top-buttons {
+        position: absolute;
+        top: auto;
+        left: 12px;
+        right: auto;
+        bottom: 12px;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 6px;
+        z-index: 20;
+      }
+
+      .top-buttons button {
+        padding: 7px 9px;
+        font-size: 11px;
+        min-width: 72px;
+        width: 72px;
+      }
+
+      .marker-legend-toggle {
+        position: absolute;
+        right: 12px;
+        bottom: 56px;
+        padding: 8px 10px;
+        font-size: 12px;
+        z-index: 20;
+      }
+
+      .sidebar-toggle {
+        position: absolute;
+        top: auto;
+        left: auto;
+        right: 12px;
+        bottom: 12px;
+        padding: 7px 9px;
+        font-size: 11px;
+        min-width: 72px;
+        width: 72px;
+        z-index: 21;
+      }
+
+      .roadview-wrap {
+        top: 56px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+        height: 240px;
+      }
+
+      .roadview-wrap.expanded {
+        top: 56px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        height: calc(100% - 68px);
+      }
+
+      .store-item-title { font-size: 14px; }
+
+      .store-item-address,
+      .store-item-detail-address,
+      .store-item-meta,
+      .selected-store .row,
+      .route-row {
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .selected-store .label { width: 60px; }
+
+      .filter-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .filter-full {
+        grid-column: 1 / -1;
+      }
+
+      .marker-legend {
+        right: 12px;
+        bottom: 100px;
+        width: 180px;
+      }
+
+      .marker-legend-header {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+
+      .marker-legend-close {
+        padding: 5px 8px;
+        font-size: 11px;
+      }
+
+      .marker-legend-list {
+        padding: 8px 10px;
+      }
+
+      .marker-legend-item {
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+
+      .wrap_map .scale,
+      #map .scale,
+      .scale {
+        left: 12px !important;
+        right: auto !important;
+        top: 12px !important;
+        bottom: auto !important;
+        z-index: 15 !important;
+      }
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;layout&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;sidebar-header&quot;&gt;
+        &lt;h1 class=&quot;sidebar-title&quot;&gt;거래처 매장 지도&lt;/h1&gt;
+
+        &lt;div class=&quot;search-box&quot;&gt;
+          &lt;input type=&quot;text&quot; id=&quot;searchInput&quot; placeholder=&quot;매장명 / 브랜드 / 주소 / 상세주소 검색&quot; /&gt;
+          &lt;button type=&quot;button&quot; onclick=&quot;applyFilters()&quot;&gt;검색&lt;/button&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;filter-grid&quot;&gt;
+          &lt;div class=&quot;filter-box filter-full&quot;&gt;
+            &lt;select id=&quot;managerFilter&quot; onchange=&quot;applyFilters()&quot;&gt;
+              &lt;option value=&quot;&quot;&gt;전체 담당자&lt;/option&gt;
+            &lt;/select&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;filter-box filter-full&quot;&gt;
+            &lt;select id=&quot;brandFilter&quot; onchange=&quot;applyFilters()&quot;&gt;
+              &lt;option value=&quot;&quot;&gt;전체 브랜드&lt;/option&gt;
+            &lt;/select&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;filter-box&quot;&gt;
+            &lt;select id=&quot;regionFilter&quot; onchange=&quot;applyFilters()&quot;&gt;
+              &lt;option value=&quot;&quot;&gt;전체 지역&lt;/option&gt;
+            &lt;/select&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;filter-box&quot;&gt;
+            &lt;select id=&quot;openFilter&quot; onchange=&quot;applyFilters()&quot;&gt;
+              &lt;option value=&quot;&quot;&gt;운영 여부&lt;/option&gt;
+              &lt;option value=&quot;open&quot;&gt;운영중&lt;/option&gt;
+              &lt;option value=&quot;break&quot;&gt;브레이크타임&lt;/option&gt;
+              &lt;option value=&quot;closed&quot;&gt;운영종료&lt;/option&gt;
+              &lt;option value=&quot;empty&quot;&gt;운영정보 없음&lt;/option&gt;
+            &lt;/select&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;filter-actions&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;secondary&quot; onclick=&quot;resetFilters()&quot;&gt;필터 초기화&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;route-box&quot;&gt;
+        &lt;h3&gt;길찾기 설정&lt;/h3&gt;
+        &lt;div class=&quot;route-row&quot;&gt;&lt;span class=&quot;route-label&quot;&gt;출발지&lt;/span&gt;&lt;span id=&quot;routeStartText&quot;&gt;선택 안 됨&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;route-row&quot;&gt;&lt;span class=&quot;route-label&quot;&gt;도착지&lt;/span&gt;&lt;span id=&quot;routeEndText&quot;&gt;선택 안 됨&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;route-actions&quot;&gt;
+          &lt;button type=&quot;button&quot; onclick=&quot;startNavigationFromRoute()&quot;&gt;길찾기&lt;/button&gt;
+          &lt;button type=&quot;button&quot; class=&quot;secondary&quot; onclick=&quot;clearRouteSelection()&quot;&gt;초기화&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;sidebar-scroll&quot; id=&quot;sidebarScroll&quot;&gt;
+        &lt;div class=&quot;selected-store&quot; id=&quot;selectedStore&quot;&gt;
+          &lt;h2&gt;매장을 선택하세요&lt;/h2&gt;
+          &lt;div class=&quot;row&quot;&gt;아래 목록이나 지도 핀을 누르면 상세 정보가 표시됩니다.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;store-list&quot; id=&quot;storeList&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;map-wrap&quot; id=&quot;mapWrap&quot;&gt;
+      &lt;button id=&quot;sidebarToggle&quot; class=&quot;sidebar-toggle&quot; onclick=&quot;toggleSidebar()&quot;&gt;필터 닫기&lt;/button&gt;
+
+      &lt;div class=&quot;top-buttons&quot;&gt;
+        &lt;button type=&quot;button&quot; id=&quot;roadviewToggle&quot; onclick=&quot;toggleRoadviewPanel()&quot;&gt;로드뷰&lt;/button&gt;
+        &lt;button type=&quot;button&quot; id=&quot;roadviewPickToggle&quot; class=&quot;roadview-pick-btn&quot; onclick=&quot;toggleRoadviewPickMode()&quot;&gt;찍기&lt;/button&gt;
+        &lt;button type=&quot;button&quot; id=&quot;pinModeToggle&quot; class=&quot;pin-mode-btn&quot; onclick=&quot;togglePinMode()&quot;&gt;운영상태&lt;/button&gt;
+      &lt;/div&gt;
+
+      &lt;div id=&quot;markerLegend&quot; class=&quot;marker-legend hidden&quot;&gt;
+        &lt;div class=&quot;marker-legend-header&quot;&gt;
+          &lt;span id=&quot;markerLegendTitle&quot;&gt;핀 안내&lt;/span&gt;
+          &lt;button type=&quot;button&quot; class=&quot;marker-legend-close&quot; onclick=&quot;toggleMarkerLegend()&quot;&gt;닫기&lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;marker-legend-list&quot; id=&quot;markerLegendList&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;button
+        type=&quot;button&quot;
+        id=&quot;markerLegendToggle&quot;
+        class=&quot;marker-legend-toggle&quot;
+        onclick=&quot;toggleMarkerLegend()&quot;
+      &gt;
+        핀
+      &lt;/button&gt;
+
+      &lt;div id=&quot;map&quot;&gt;&lt;/div&gt;
+
+      &lt;div id=&quot;roadviewWrap&quot; class=&quot;roadview-wrap&quot;&gt;
+        &lt;div class=&quot;roadview-header&quot;&gt;
+          &lt;span id=&quot;roadviewTitle&quot;&gt;로드뷰&lt;/span&gt;
+          &lt;div class=&quot;roadview-toolbar&quot;&gt;
+            &lt;button type=&quot;button&quot; id=&quot;roadviewExpandBtn&quot; onclick=&quot;toggleRoadviewSize()&quot;&gt;크게 보기&lt;/button&gt;
+            &lt;button type=&quot;button&quot; onclick=&quot;closeRoadviewPanel()&quot;&gt;닫기&lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div id=&quot;roadview&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;script src=&quot;https://dapi.kakao.com/v2/maps/sdk.js?appkey=ca5353f84284c3cb5778577cb87e4f57&amp;libraries=services&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;https://developers.kakao.com/sdk/js/kakao.min.js&quot;&gt;&lt;/script&gt;
+
+  &lt;script&gt;
+    if (window.Kakao &amp;&amp; !window.Kakao.isInitialized()) {
+      Kakao.init(&quot;ca5353f84284c3cb5778577cb87e4f57&quot;);
+    }
+
+    const SHEET_API_URL = &quot;https://script.google.com/macros/s/AKfycbzFmqPMmdvsoaEr7DnuP-uC8y1fq6xDDzLah7poMc-RgQ9nCAnA-mVveEZrXbBKupMm/exec&quot;;
+
+    let stores = [];
+    let storesForFilter = [];
+    let storeMarkers = [];
+    let openedInfowindow = null;
+    let selectedStoreName = null;
+    let currentRoadviewStore = null;
+
+    let routeStartStore = null;
+    let routeEndStore = null;
+
+    let isRoadviewExpanded = false;
+    let isRoadviewPickMode = false;
+    let roadviewPickerOverlay = null;
+    let isRoadviewPickerVisible = false;
+
+    let relayoutTimer = null;
+    let markersBuildTaskId = 0;
+    let currentPinMode = &quot;manager&quot;;
+
+    let pendingInfoWindowTimer = null;
+
+    const mapContainer = document.getElementById(&quot;map&quot;);
+    const mapWrapEl = document.getElementById(&quot;mapWrap&quot;);
+    const sidebarEl = document.getElementById(&quot;sidebar&quot;);
+    const sidebarScrollEl = document.getElementById(&quot;sidebarScroll&quot;);
+
+    const map = new kakao.maps.Map(mapContainer, {
+      center: new kakao.maps.LatLng(36.5, 127.8),
+      level: 13
+    });
+
+    const zoomControl = new kakao.maps.ZoomControl();
+    map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
+
+    const roadview = new kakao.maps.Roadview(document.getElementById(&quot;roadview&quot;));
+    const roadviewClient = new kakao.maps.RoadviewClient();
+
+    const managerMarkerColors = {
+      &quot;김세연&quot;: &quot;#4c6ef5&quot;,
+      &quot;김광태&quot;: &quot;#f06595&quot;,
+      &quot;최낙현&quot;: &quot;#f59f00&quot;,
+      &quot;이승우&quot;: &quot;#fa5252&quot;,
+      &quot;센터&quot;: &quot;#20c997&quot;,
+      &quot;기본&quot;: &quot;#845ef7&quot;
+    };
+
+    const statusMarkerColors = {
+      &quot;운영중&quot;: &quot;#2f9e44&quot;,
+      &quot;브레이크타임&quot;: &quot;#f08c00&quot;,
+      &quot;미운영&quot;: &quot;#868e96&quot;,
+      &quot;정보없음&quot;: &quot;#8b5e3c&quot;
+    };
+
+    function normalizeText(text) {
+      return String(text || &quot;&quot;).toLowerCase().replace(/\s+/g, &quot;&quot;).trim();
+    }
+
+    function createUniqueOptions(arr) {
+      return [...new Set(arr.filter(Boolean))].sort((a, b) =&gt; a.localeCompare(b, &quot;ko&quot;));
+    }
+
+    function extractRegion(address) {
+      const text = String(address || &quot;&quot;).trim();
+      if (!text) return &quot;기타&quot;;
+      if (text.startsWith(&quot;서울&quot;)) return &quot;서울&quot;;
+      if (text.startsWith(&quot;경기&quot;)) return &quot;경기&quot;;
+      if (text.startsWith(&quot;인천&quot;)) return &quot;인천&quot;;
+      if (text.startsWith(&quot;부산&quot;)) return &quot;부산&quot;;
+      if (text.startsWith(&quot;대구&quot;)) return &quot;대구&quot;;
+      if (text.startsWith(&quot;광주&quot;)) return &quot;광주&quot;;
+      if (text.startsWith(&quot;대전&quot;)) return &quot;대전&quot;;
+      if (text.startsWith(&quot;울산&quot;)) return &quot;울산&quot;;
+      if (text.startsWith(&quot;세종&quot;)) return &quot;세종&quot;;
+      if (text.startsWith(&quot;강원&quot;)) return &quot;강원&quot;;
+      if (text.startsWith(&quot;충북&quot;)) return &quot;충북&quot;;
+      if (text.startsWith(&quot;충남&quot;)) return &quot;충남&quot;;
+      if (text.startsWith(&quot;전북&quot;)) return &quot;전북&quot;;
+      if (text.startsWith(&quot;전남&quot;)) return &quot;전남&quot;;
+      if (text.startsWith(&quot;경북&quot;)) return &quot;경북&quot;;
+      if (text.startsWith(&quot;경남&quot;)) return &quot;경남&quot;;
+      if (text.startsWith(&quot;제주&quot;)) return &quot;제주&quot;;
+      return text.split(&quot; &quot;)[0] || &quot;기타&quot;;
+    }
+
+    function rebuildStoresForFilter() {
+      storesForFilter = stores.map(store =&gt; ({
+        ...store,
+        region: extractRegion(store.address)
+      }));
+    }
+
+    function getManagerColor(manager) {
+      return managerMarkerColors[String(manager || &quot;&quot;).trim()] || managerMarkerColors[&quot;기본&quot;];
+    }
+
+    function getStatusColor(store) {
+      const status = getStoreStatus(store).status;
+      return statusMarkerColors[status] || managerMarkerColors[&quot;기본&quot;];
+    }
+
+    function getMarkerColor(store) {
+      if (currentPinMode === &quot;open&quot;) {
+        return getStatusColor(store);
+      }
+      return getManagerColor(store.manager);
+    }
+
+    function createClassicPinSvg(color) {
+      return `
+        &lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;22&quot; height=&quot;32&quot; viewBox=&quot;0 0 28 40&quot; fill=&quot;none&quot;&gt;
+          &lt;path d=&quot;M14 1.5C7.096 1.5 1.5 7.096 1.5 14c0 9.646 10.404 20.182 11.818 21.57a1 1 0 0 0 1.364 0C16.096 34.182 26.5 23.646 26.5 14 26.5 7.096 20.904 1.5 14 1.5Z&quot; fill=&quot;${color}&quot; stroke=&quot;#FFFFFF&quot; stroke-width=&quot;2&quot;/&gt;
+          &lt;circle cx=&quot;14&quot; cy=&quot;14&quot; r=&quot;5.2&quot; fill=&quot;#FFFFFF&quot; fill-opacity=&quot;0.96&quot;/&gt;
+        &lt;/svg&gt;
+      `.trim();
+    }
+
+    function createMarkerImage(color) {
+      const svg = createClassicPinSvg(color);
+      const imageSrc = &quot;data:image/svg+xml;charset=UTF-8,&quot; + encodeURIComponent(svg);
+      const imageSize = new kakao.maps.Size(22, 32);
+      const imageOption = { offset: new kakao.maps.Point(11, 32) };
+      return new kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
+    }
+
+    function getMarkerZIndex(store) {
+      if (currentPinMode !== &quot;open&quot;) return 10;
+      const status = getStoreStatus(store).status;
+      if (status === &quot;운영중&quot;) return 400;
+      if (status === &quot;브레이크타임&quot;) return 300;
+      if (status === &quot;미운영&quot;) return 200;
+      if (status === &quot;정보없음&quot;) return 100;
+      return 10;
+    }
+
+    function parseTimeRange(text) {
+      const value = String(text || &quot;&quot;).trim();
+      const match = value.match(/^(\d{2}:\d{2})~(\d{2}:\d{2})$/);
+      if (!match) return null;
+
+      const [startH, startM] = match[1].split(&quot;:&quot;).map(Number);
+      const [endH, endM] = match[2].split(&quot;:&quot;).map(Number);
+
+      return {
+        start: startH * 60 + startM,
+        end: endH * 60 + endM
+      };
+    }
+
+    function formatRemainTime(minutes) {
+      const safeMinutes = Math.max(0, Math.floor(minutes));
+
+      if (safeMinutes &lt;= 0) return &quot;곧&quot;;
+
+      const h = Math.floor(safeMinutes / 60);
+      const m = safeMinutes % 60;
+
+      if (h &gt; 0 &amp;&amp; m &gt; 0) return `${h}시간 ${m}분`;
+      if (h &gt; 0) return `${h}시간`;
+      return `${m}분`;
+    }
+
+    function getStatusClass(status) {
+      if (status === &quot;운영중&quot;) return &quot;status-open&quot;;
+      if (status === &quot;브레이크타임&quot;) return &quot;status-break&quot;;
+      if (status === &quot;정보없음&quot;) return &quot;status-empty&quot;;
+      return &quot;status-closed&quot;;
+    }
+
+    function getStoreStatus(store) {
+      const now = new Date();
+      const dayNames = [&quot;일&quot;, &quot;월&quot;, &quot;화&quot;, &quot;수&quot;, &quot;목&quot;, &quot;금&quot;, &quot;토&quot;];
+      const today = dayNames[now.getDay()];
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+      const operatingDays = String(store.operating_days || &quot;&quot;).trim();
+      const operatingHours = String(store.operating_hours || &quot;&quot;).trim();
+      const breakTime = String(store.break_time || &quot;&quot;).trim();
+
+      if (!operatingDays || !operatingHours) {
+        return {
+          status: &quot;정보없음&quot;,
+          message: &quot;운영 정보 없음&quot;
+        };
+      }
+
+      const validDays = operatingDays
+        .split(&quot;,&quot;)
+        .map(v =&gt; v.trim())
+        .filter(Boolean);
+
+      const range = parseTimeRange(operatingHours);
+      if (!range) {
+        return {
+          status: &quot;정보없음&quot;,
+          message: &quot;운영 정보 없음&quot;
+        };
+      }
+
+      if (!validDays.includes(today)) {
+        return {
+          status: &quot;미운영&quot;,
+          message: &quot;운영 종료&quot;
+        };
+      }
+
+      if (nowMinutes &lt; range.start || nowMinutes &gt; range.end) {
+        return {
+          status: &quot;미운영&quot;,
+          message: &quot;운영 종료&quot;
+        };
+      }
+
+      const breakRange = breakTime ? parseTimeRange(breakTime) : null;
+
+      if (breakRange &amp;&amp; nowMinutes &gt;= breakRange.start &amp;&amp; nowMinutes &lt;= breakRange.end) {
+        return {
+          status: &quot;브레이크타임&quot;,
+          message: `${formatRemainTime(breakRange.end - nowMinutes)} 후 운영 재개`
+        };
+      }
+
+      if (breakRange &amp;&amp; nowMinutes &lt; breakRange.start) {
+        return {
+          status: &quot;운영중&quot;,
+          message: `${formatRemainTime(breakRange.start - nowMinutes)} 후 브레이크타임`
+        };
+      }
+
+      return {
+        status: &quot;운영중&quot;,
+        message: `${formatRemainTime(range.end - nowMinutes)} 후 운영 종료`
+      };
+    }
+
+    function getExistingManagersInData() {
+      return createUniqueOptions(
+        stores
+          .map(store =&gt; String(store.manager || &quot;&quot;).trim())
+          .filter(Boolean)
+      );
+    }
+
+    function renderMarkerLegend() {
+      const titleEl = document.getElementById(&quot;markerLegendTitle&quot;);
+      const listEl = document.getElementById(&quot;markerLegendList&quot;);
+      if (!titleEl || !listEl) return;
+
+      if (currentPinMode === &quot;open&quot;) {
+        titleEl.textContent = &quot;운영상태 핀 안내&quot;;
+        listEl.innerHTML = `
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${statusMarkerColors[&quot;운영중&quot;]}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;운영중&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${statusMarkerColors[&quot;브레이크타임&quot;]}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;브레이크타임&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${statusMarkerColors[&quot;미운영&quot;]}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;운영종료&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${statusMarkerColors[&quot;정보없음&quot;]}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;운영정보 없음&lt;/span&gt;
+          &lt;/div&gt;
+        `;
+        return;
+      }
+
+      const managers = getExistingManagersInData();
+      titleEl.textContent = &quot;담당자 핀 안내&quot;;
+
+      if (!managers.length) {
+        listEl.innerHTML = `
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${managerMarkerColors[&quot;기본&quot;]}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;표시할 담당자 없음&lt;/span&gt;
+          &lt;/div&gt;
+        `;
+        return;
+      }
+
+      listEl.innerHTML = managers.map(manager =&gt; `
+        &lt;div class=&quot;marker-legend-item&quot;&gt;
+          &lt;span class=&quot;marker-dot&quot; style=&quot;background:${getManagerColor(manager)}&quot;&gt;&lt;/span&gt;
+          &lt;span&gt;${manager}&lt;/span&gt;
+        &lt;/div&gt;
+      `).join(&quot;&quot;);
+    }
+
+    function toggleMarkerLegend() {
+      const legend = document.getElementById(&quot;markerLegend&quot;);
+      const toggleBtn = document.getElementById(&quot;markerLegendToggle&quot;);
+
+      if (!legend || !toggleBtn) return;
+
+      const isHidden = legend.classList.contains(&quot;hidden&quot;);
+
+      if (isHidden) {
+        renderMarkerLegend();
+        legend.classList.remove(&quot;hidden&quot;);
+        toggleBtn.style.display = &quot;none&quot;;
+      } else {
+        legend.classList.add(&quot;hidden&quot;);
+        toggleBtn.style.display = &quot;block&quot;;
+      }
+    }
+
+    function refreshMarkerImages() {
+      storeMarkers.forEach(store =&gt; {
+        if (store.marker) {
+          store.marker.setImage(createMarkerImage(getMarkerColor(store)));
+          store.marker.setZIndex(getMarkerZIndex(store));
+        }
+      });
+    }
+
+    function togglePinMode() {
+      const button = document.getElementById(&quot;pinModeToggle&quot;);
+
+      if (currentPinMode === &quot;manager&quot;) {
+        currentPinMode = &quot;open&quot;;
+        button.textContent = &quot;담당자색&quot;;
+        button.classList.add(&quot;active&quot;);
+      } else {
+        currentPinMode = &quot;manager&quot;;
+        button.textContent = &quot;운영상태&quot;;
+        button.classList.remove(&quot;active&quot;);
+      }
+
+      renderMarkerLegend();
+      refreshMarkerImages();
+
+      const selected = getSelectedStoreData();
+      if (selected) {
+        renderSelectedStore(selected);
+        closeAllInfoWindows();
+        openStoreInfo(selected);
+      }
+    }
+
+    function isMobileDevice() {
+      return window.matchMedia(&quot;(max-width: 768px)&quot;).matches;
+    }
+
+    function relayoutMapSafely() {
+      clearTimeout(relayoutTimer);
+      relayoutTimer = setTimeout(() =&gt; {
+        map.relayout();
+      }, 120);
+    }
+
+    function getCurrentFilterValues() {
+      return {
+        keyword: normalizeText(document.getElementById(&quot;searchInput&quot;).value),
+        manager: document.getElementById(&quot;managerFilter&quot;).value,
+        brand: document.getElementById(&quot;brandFilter&quot;).value,
+        region: document.getElementById(&quot;regionFilter&quot;).value,
+        openFilter: document.getElementById(&quot;openFilter&quot;).value
+      };
+    }
+
+    function getFilteredBaseStores(filters = {}) {
+      const { keyword = &quot;&quot;, manager = &quot;&quot;, brand = &quot;&quot;, region = &quot;&quot;, openFilter = &quot;&quot; } = filters;
+      let results = [...storesForFilter];
+
+      if (manager) results = results.filter(store =&gt; store.manager === manager);
+      if (brand) results = results.filter(store =&gt; store.brand === brand);
+      if (region) results = results.filter(store =&gt; store.region === region);
+
+      if (openFilter) {
+        results = results.filter(store =&gt; {
+          const status = getStoreStatus(store).status;
+          if (openFilter === &quot;open&quot;) return status === &quot;운영중&quot;;
+          if (openFilter === &quot;break&quot;) return status === &quot;브레이크타임&quot;;
+          if (openFilter === &quot;closed&quot;) return status === &quot;미운영&quot;;
+          if (openFilter === &quot;empty&quot;) return status === &quot;정보없음&quot;;
+          return true;
+        });
+      }
+
+      if (keyword) {
+        results = results.filter(store =&gt; {
+          const text = normalizeText(
+            `${store.name} ${store.manager} ${store.brand} ${store.address} ${store.detail_address} ${store.region} ${store.note} ${store.operating_hours} ${store.operating_days} ${store.break_time} ${store.phone}`
+          );
+          return text.includes(keyword);
+        });
+      }
+
+      return results;
+    }
+
+    function getFilteredMarkerStores(filters = {}) {
+      const baseResults = getFilteredBaseStores(filters);
+      const names = new Set(baseResults.map(store =&gt; store.name));
+      return storeMarkers.filter(store =&gt; names.has(store.name));
+    }
+
+    function renderFilterOptions() {
+      const managerFilter = document.getElementById(&quot;managerFilter&quot;);
+      const brandFilter = document.getElementById(&quot;brandFilter&quot;);
+      const regionFilter = document.getElementById(&quot;regionFilter&quot;);
+      const openFilter = document.getElementById(&quot;openFilter&quot;);
+
+      const current = getCurrentFilterValues();
+
+      const managers = createUniqueOptions(storesForFilter.map(store =&gt; store.manager));
+      const brands = createUniqueOptions(
+        getFilteredBaseStores({
+          keyword: current.keyword,
+          manager: current.manager,
+          region: current.region,
+          openFilter: current.openFilter
+        }).map(store =&gt; store.brand)
+      );
+      const regions = createUniqueOptions(
+        getFilteredBaseStores({
+          keyword: current.keyword,
+          manager: current.manager,
+          brand: current.brand,
+          openFilter: current.openFilter
+        }).map(store =&gt; store.region)
+      );
+
+      managerFilter.innerHTML = '&lt;option value=&quot;&quot;&gt;전체 담당자&lt;/option&gt;';
+      brandFilter.innerHTML = '&lt;option value=&quot;&quot;&gt;전체 브랜드&lt;/option&gt;';
+      regionFilter.innerHTML = '&lt;option value=&quot;&quot;&gt;전체 지역&lt;/option&gt;';
+
+      managers.forEach(value =&gt; managerFilter.appendChild(new Option(value, value)));
+      brands.forEach(value =&gt; brandFilter.appendChild(new Option(value, value)));
+      regions.forEach(value =&gt; regionFilter.appendChild(new Option(value, value)));
+
+      if (managers.includes(current.manager)) managerFilter.value = current.manager;
+      if (brands.includes(current.brand)) brandFilter.value = current.brand;
+      if (regions.includes(current.region)) regionFilter.value = current.region;
+
+      openFilter.value = current.openFilter;
+    }
+
+    function renderRouteInfo() {
+      document.getElementById(&quot;routeStartText&quot;).textContent = routeStartStore ? routeStartStore.name : &quot;선택 안 됨&quot;;
+      document.getElementById(&quot;routeEndText&quot;).textContent = routeEndStore ? routeEndStore.name : &quot;선택 안 됨&quot;;
+    }
+
+    function renderSelectedStore(store) {
+      const box = document.getElementById(&quot;selectedStore&quot;);
+
+      if (!store) {
+        box.innerHTML = `
+          &lt;h2&gt;매장을 선택하세요&lt;/h2&gt;
+          &lt;div class=&quot;row&quot;&gt;아래 목록이나 지도 핀을 누르면 상세 정보가 표시됩니다.&lt;/div&gt;
+        `;
+        return;
+      }
+
+      const statusInfo = getStoreStatus(store);
+      const statusClass = getStatusClass(statusInfo.status);
+
+      box.innerHTML = `
+        &lt;div class=&quot;status-top ${statusClass}&quot;&gt;${statusInfo.message}&lt;/div&gt;
+
+        &lt;h2&gt;${store.name}&lt;/h2&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;담당자&lt;/span&gt;${store.manager || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;운영요일&lt;/span&gt;${store.operating_days || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;운영시간&lt;/span&gt;${store.operating_hours || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;주소&lt;/span&gt;${store.address || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;상세주소&lt;/span&gt;${store.detail_address || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;브레이크&lt;/span&gt;${store.break_time || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;전화&lt;/span&gt;${store.phone || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;비고&lt;/span&gt;${store.note || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;selected-actions&quot;&gt;
+          &lt;button type=&quot;button&quot; onclick=&quot;setSelectedAsStart()&quot;&gt;출발지로 설정&lt;/button&gt;
+          &lt;button type=&quot;button&quot; onclick=&quot;setSelectedAsEnd()&quot;&gt;도착지로 설정&lt;/button&gt;
+        &lt;/div&gt;
+      `;
+    }
+
+    function renderDefaultMessage() {
+      renderSelectedStore(null);
+    }
+
+    function renderResultMessage(results) {
+      document.getElementById(&quot;selectedStore&quot;).innerHTML = `
+        &lt;h2&gt;검색 결과 ${results.length}개&lt;/h2&gt;
+        &lt;div class=&quot;row&quot;&gt;아래 목록이나 지도 핀에서 원하는 매장을 선택하세요.&lt;/div&gt;
+      `;
+    }
+
+    function renderNoResultMessage() {
+      document.getElementById(&quot;selectedStore&quot;).innerHTML = `
+        &lt;h2&gt;검색 결과 없음&lt;/h2&gt;
+        &lt;div class=&quot;row&quot;&gt;조건에 맞는 매장이 없습니다.&lt;/div&gt;
+      `;
+    }
+
+    function renderStoreList(items) {
+      const list = document.getElementById(&quot;storeList&quot;);
+      list.innerHTML = &quot;&quot;;
+
+      const statusOrder = {
+        &quot;운영중&quot;: 1,
+        &quot;브레이크타임&quot;: 2,
+        &quot;미운영&quot;: 3,
+        &quot;정보없음&quot;: 4
+      };
+
+      const sortedItems = [...items].sort((a, b) =&gt; {
+        const statusA = getStoreStatus(a).status;
+        const statusB = getStoreStatus(b).status;
+        const orderA = statusOrder[statusA] || 999;
+        const orderB = statusOrder[statusB] || 999;
+
+        if (orderA !== orderB) return orderA - orderB;
+        return String(a.name || &quot;&quot;).localeCompare(String(b.name || &quot;&quot;), &quot;ko&quot;);
+      });
+
+      const fragment = document.createDocumentFragment();
+
+      sortedItems.forEach(store =&gt; {
+        const statusInfo = getStoreStatus(store);
+
+        const div = document.createElement(&quot;div&quot;);
+        div.className = &quot;store-item&quot; + (selectedStoreName === store.name ? &quot; active&quot; : &quot;&quot;);
+
+        div.innerHTML = `
+          &lt;div class=&quot;store-item-title&quot;&gt;${store.name}&lt;/div&gt;
+          &lt;div class=&quot;store-item-address&quot;&gt;${store.address || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-detail-address&quot;&gt;${store.detail_address || &quot;&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;
+            담당자: ${store.manager || &quot;-&quot;} / 브랜드: ${store.brand || &quot;-&quot;} / 지역: ${store.region || &quot;-&quot;}
+          &lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;
+            안내: ${statusInfo.message}
+          &lt;/div&gt;
+        `;
+
+        div.addEventListener(&quot;click&quot;, function() {
+          selectStore(store);
+        });
+
+        fragment.appendChild(div);
+      });
+
+      list.appendChild(fragment);
+    }
+
+    function updateMarkers(results, shouldFitBounds = false) {
+      const bounds = new kakao.maps.LatLngBounds();
+
+      storeMarkers.forEach(store =&gt; {
+        const visible = results.includes(store);
+        if (store.marker) store.marker.setMap(visible ? map : null);
+        if (visible) bounds.extend(store.coords);
+      });
+
+      if (results.length &gt; 0 &amp;&amp; shouldFitBounds) {
+        map.setBounds(bounds);
+      }
+    }
+
+    function clearPendingInfoWindowOpen() {
+      if (pendingInfoWindowTimer) {
+        clearTimeout(pendingInfoWindowTimer);
+        pendingInfoWindowTimer = null;
+      }
+    }
+
+    function closeOpenedInfowindow() {
+      if (openedInfowindow) {
+        openedInfowindow.close();
+        openedInfowindow = null;
+      }
+    }
+
+    function closeAllInfoWindows() {
+      clearPendingInfoWindowOpen();
+      storeMarkers.forEach(store =&gt; {
+        if (store.infowindow) store.infowindow.close();
+      });
+      openedInfowindow = null;
+    }
+
+    function getSelectedStoreData() {
+      return storeMarkers.find(store =&gt; store.name === selectedStoreName) || null;
+    }
+
+    function clearSelectedStoreState(options = {}) {
+      const { keepRoute = false } = options;
+
+      clearPendingInfoWindowOpen();
+      closeAllInfoWindows();
+      selectedStoreName = null;
+
+      if (!keepRoute) {
+        routeEndStore = null;
+      }
+
+      const currentResults = getFilteredMarkerStores(getCurrentFilterValues());
+      renderStoreList(currentResults.length ? currentResults : storeMarkers);
+      renderDefaultMessage();
+      renderRouteInfo();
+    }
+
+    function handleInfoWindowClose() {
+      clearSelectedStoreState();
+    }
+
+    function scrollMapIntoView() {
+      if (!isMobileDevice()) return Promise.resolve();
+
+      return new Promise(resolve =&gt; {
+        mapWrapEl.scrollIntoView({
+          behavior: &quot;smooth&quot;,
+          block: &quot;start&quot;
+        });
+        setTimeout(resolve, 320);
+      });
+    }
+
+    function scrollSidebarToTop() {
+      if (isMobileDevice() || !sidebarScrollEl) return Promise.resolve();
+
+      return new Promise(resolve =&gt; {
+        sidebarScrollEl.scrollTo({
+          top: 0,
+          behavior: &quot;smooth&quot;
+        });
+        setTimeout(resolve, 320);
+      });
+    }
+
+    function getOffsetCenter(latlng, offsetX = 0, offsetY = 0) {
+      const projection = map.getProjection();
+      if (!projection) return latlng;
+
+      const point = projection.pointFromCoords(latlng);
+      const movedPoint = new kakao.maps.Point(point.x - offsetX, point.y - offsetY);
+      return projection.coordsFromPoint(movedPoint);
+    }
+
+    function moveMapToStore(store) {
+      if (!store || !store.coords) return;
+
+      map.relayout();
+
+      if (isMobileDevice()) {
+        map.setLevel(4);
+        const movedCenter = getOffsetCenter(store.coords, 0, 120);
+        map.setCenter(movedCenter);
+      } else {
+        map.setLevel(3);
+        map.setCenter(store.coords);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? &quot;&quot;)
+        .replace(/&amp;/g, &quot;&amp;amp;&quot;)
+        .replace(/&lt;/g, &quot;&amp;lt;&quot;)
+        .replace(/&gt;/g, &quot;&amp;gt;&quot;)
+        .replace(/&quot;/g, &quot;&amp;quot;&quot;)
+        .replace(/'/g, &quot;&amp;#39;&quot;);
+    }
+
+    function createInfoWindowContent(store) {
+      return `
+        &lt;div class=&quot;info-box&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;info-window-close&quot; onclick=&quot;handleInfoWindowClose()&quot;&gt;×&lt;/button&gt;
+          &lt;h3&gt;${escapeHtml(store.name || &quot;&quot;)}&lt;/h3&gt;
+          &lt;div&gt;&lt;strong&gt;담당자&lt;/strong&gt; &lt;span&gt;${escapeHtml(store.manager || &quot;-&quot;)}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;운영요일&lt;/strong&gt; &lt;span&gt;${escapeHtml(store.operating_days || &quot;-&quot;)}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;운영시간&lt;/strong&gt; &lt;span&gt;${escapeHtml(store.operating_hours || &quot;-&quot;)}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;주소&lt;/strong&gt; &lt;span&gt;${escapeHtml(store.address || &quot;-&quot;)}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;상세주소&lt;/strong&gt; &lt;span&gt;${escapeHtml(store.detail_address || &quot;-&quot;)}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;전화&lt;/strong&gt; &lt;span&gt;${escapeHtml(store.phone || &quot;-&quot;)}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;비고&lt;/strong&gt; &lt;span&gt;${escapeHtml(store.note || &quot;-&quot;)}&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      `;
+    }
+
+    function openStoreInfo(store) {
+      if (!store || !store.marker) return;
+
+      const yAnchor = isMobileDevice() ? 2.15 : 2.25;
+      const xAnchor = 0.5;
+      const infoContent = createInfoWindowContent(store);
+
+      if (!store.infowindow) {
+        store.infowindow = new kakao.maps.InfoWindow({
+          content: infoContent,
+          removable: false,
+          xAnchor,
+          yAnchor,
+          zIndex: 1000
+        });
+      } else {
+        store.infowindow.setContent(infoContent);
+        store.infowindow.setOptions({ xAnchor, yAnchor, zIndex: 1000 });
+      }
+
+      if (typeof store.infowindow.setZIndex === &quot;function&quot;) {
+        store.infowindow.setZIndex(1000);
+      }
+
+      closeAllInfoWindows();
+      store.infowindow.open(map, store.marker);
+      openedInfowindow = store.infowindow;
+    }
+
+    async function selectStore(store) {
+      if (!store) return;
+
+      const targetStore = storeMarkers.find(item =&gt; item.name === store.name) || store;
+      if (!targetStore || !targetStore.coords || !targetStore.marker) return;
+
+      clearPendingInfoWindowOpen();
+
+      selectedStoreName = targetStore.name;
+      renderSelectedStore(targetStore);
+
+      if (!routeEndStore) {
+        routeEndStore = targetStore;
+      }
+      renderRouteInfo();
+
+      const currentResults = getFilteredMarkerStores(getCurrentFilterValues());
+      const renderItems = currentResults.some(item =&gt; item.name === targetStore.name)
+        ? currentResults
+        : [targetStore, ...currentResults];
+      renderStoreList(renderItems);
+
+      closeOpenedInfowindow();
+
+      if (isMobileDevice()) {
+        await scrollMapIntoView();
+      } else {
+        await scrollSidebarToTop();
+      }
+
+      moveMapToStore(targetStore);
+
+      pendingInfoWindowTimer = setTimeout(() =&gt; {
+        openStoreInfo(targetStore);
+        pendingInfoWindowTimer = null;
+      }, 220);
+    }
+
+    function setSelectedAsStart() {
+      const selectedStore = getSelectedStoreData();
+      if (!selectedStore) {
+        alert(&quot;먼저 매장을 선택해 주세요.&quot;);
+        return;
+      }
+      routeStartStore = selectedStore;
+      renderRouteInfo();
+    }
+
+    function setSelectedAsEnd() {
+      const selectedStore = getSelectedStoreData();
+      if (!selectedStore) {
+        alert(&quot;먼저 매장을 선택해 주세요.&quot;);
+        return;
+      }
+      routeEndStore = selectedStore;
+      renderRouteInfo();
+    }
+
+    function clearRouteSelection() {
+      routeStartStore = null;
+      routeEndStore = null;
+      renderRouteInfo();
+    }
+
+    function applyFilters() {
+      clearPendingInfoWindowOpen();
+
+      if (storeMarkers.length === 0) {
+        alert(&quot;매장 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.&quot;);
+        return;
+      }
+
+      renderFilterOptions();
+      const current = getCurrentFilterValues();
+      const results = getFilteredMarkerStores(current);
+      const selectedStore = getSelectedStoreData();
+
+      closeAllInfoWindows();
+
+      if (!current.keyword &amp;&amp; !current.manager &amp;&amp; !current.brand &amp;&amp; !current.region &amp;&amp; !current.openFilter) {
+        updateMarkers(storeMarkers, false);
+        renderStoreList(storeMarkers);
+
+        if (selectedStore) {
+          renderSelectedStore(selectedStore);
+          openStoreInfo(selectedStore);
+        } else {
+          renderDefaultMessage();
+        }
+        return;
+      }
+
+      if (results.length === 0) {
+        updateMarkers([], false);
+        document.getElementById(&quot;storeList&quot;).innerHTML = &quot;&quot;;
+        selectedStoreName = null;
+        renderNoResultMessage();
+        return;
+      }
+
+      updateMarkers(results, true);
+      renderStoreList(results);
+
+      if (selectedStore &amp;&amp; results.some(store =&gt; store.name === selectedStore.name)) {
+        renderSelectedStore(selectedStore);
+        openStoreInfo(selectedStore);
+      } else {
+        selectedStoreName = null;
+        renderResultMessage(results);
+      }
+    }
+
+    function resetFilters() {
+      clearPendingInfoWindowOpen();
+
+      document.getElementById(&quot;searchInput&quot;).value = &quot;&quot;;
+      document.getElementById(&quot;managerFilter&quot;).value = &quot;&quot;;
+      document.getElementById(&quot;brandFilter&quot;).value = &quot;&quot;;
+      document.getElementById(&quot;regionFilter&quot;).value = &quot;&quot;;
+      document.getElementById(&quot;openFilter&quot;).value = &quot;&quot;;
+
+      selectedStoreName = null;
+      closeAllInfoWindows();
+      renderFilterOptions();
+      updateMarkers(storeMarkers, false);
+      renderStoreList(storeMarkers);
+      renderDefaultMessage();
+    }
+
+    function toggleSidebar() {
+      const toggleButton = document.getElementById(&quot;sidebarToggle&quot;);
+      sidebarEl.classList.toggle(&quot;collapsed&quot;);
+      toggleButton.textContent = sidebarEl.classList.contains(&quot;collapsed&quot;) ? &quot;필터 열기&quot; : &quot;필터 닫기&quot;;
+      relayoutMapSafely();
+    }
+
+    function openRoadviewAtPosition(position, titleText = &quot;로드뷰&quot;) {
+      const wrap = document.getElementById(&quot;roadviewWrap&quot;);
+      const toggleBtn = document.getElementById(&quot;roadviewToggle&quot;);
+      const title = document.getElementById(&quot;roadviewTitle&quot;);
+
+      roadviewClient.getNearestPanoId(position, 50, function(panoId) {
+        if (!panoId) {
+          alert(&quot;이 위치 근처에는 로드뷰가 없습니다.&quot;);
+          return;
+        }
+
+        title.textContent = titleText;
+        wrap.classList.add(&quot;open&quot;);
+        toggleBtn.textContent = &quot;로드뷰 닫기&quot;;
+        roadview.setPanoId(panoId, position);
+
+        setTimeout(() =&gt; {
+          roadview.relayout();
+        }, 100);
+      });
+    }
+
+    function openRoadviewForStore(store) {
+      currentRoadviewStore = store;
+      openRoadviewAtPosition(store.coords, `${store.name} 로드뷰`);
+    }
+
+    function closeRoadviewPanel() {
+      const wrap = document.getElementById(&quot;roadviewWrap&quot;);
+      const toggleBtn = document.getElementById(&quot;roadviewToggle&quot;);
+      wrap.classList.remove(&quot;open&quot;);
+      toggleBtn.textContent = &quot;로드뷰&quot;;
+    }
+
+    function toggleRoadviewPanel() {
+      const wrap = document.getElementById(&quot;roadviewWrap&quot;);
+
+      if (wrap.classList.contains(&quot;open&quot;)) {
+        closeRoadviewPanel();
+        return;
+      }
+
+      const selectedStore = getSelectedStoreData();
+      if (!selectedStore) {
+        alert(&quot;먼저 매장을 선택해 주세요.&quot;);
+        return;
+      }
+
+      openRoadviewForStore(selectedStore);
+    }
+
+    function toggleRoadviewSize() {
+      const wrap = document.getElementById(&quot;roadviewWrap&quot;);
+      const expandBtn = document.getElementById(&quot;roadviewExpandBtn&quot;);
+
+      isRoadviewExpanded = !isRoadviewExpanded;
+      wrap.classList.toggle(&quot;expanded&quot;, isRoadviewExpanded);
+      expandBtn.textContent = isRoadviewExpanded ? &quot;작게 보기&quot; : &quot;크게 보기&quot;;
+
+      setTimeout(() =&gt; {
+        roadview.relayout();
+      }, 200);
+    }
+
+    function createRoadviewPickerOverlay() {
+      const content = document.createElement(&quot;div&quot;);
+      content.className = &quot;roadview-picker-pin&quot;;
+
+      return new kakao.maps.CustomOverlay({
+        content,
+        position: map.getCenter(),
+        xAnchor: 0.5,
+        yAnchor: 1
+      });
+    }
+
+    function startRoadviewPickMode() {
+      isRoadviewPickMode = true;
+      isRoadviewPickerVisible = true;
+
+      const button = document.getElementById(&quot;roadviewPickToggle&quot;);
+      button.classList.add(&quot;active&quot;);
+      button.textContent = &quot;찍기 종료&quot;;
+
+      map.addOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);
+
+      if (!roadviewPickerOverlay) {
+        roadviewPickerOverlay = createRoadviewPickerOverlay();
+      }
+
+      roadviewPickerOverlay.setPosition(map.getCenter());
+      roadviewPickerOverlay.setMap(map);
+    }
+
+    function stopRoadviewPickMode() {
+      isRoadviewPickMode = false;
+      isRoadviewPickerVisible = false;
+
+      const button = document.getElementById(&quot;roadviewPickToggle&quot;);
+      button.classList.remove(&quot;active&quot;);
+      button.textContent = &quot;찍기&quot;;
+
+      map.removeOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);
+
+      if (roadviewPickerOverlay) {
+        roadviewPickerOverlay.setMap(null);
+      }
+    }
+
+    function toggleRoadviewPickMode() {
+      if (isRoadviewPickMode) {
+        stopRoadviewPickMode();
+      } else {
+        startRoadviewPickMode();
+      }
+    }
+
+    function resetMapData() {
+      clearPendingInfoWindowOpen();
+      markersBuildTaskId += 1;
+      closeAllInfoWindows();
+
+      storeMarkers.forEach(store =&gt; {
+        if (store.marker) store.marker.setMap(null);
+      });
+
+      storeMarkers = [];
+      openedInfowindow = null;
+      selectedStoreName = null;
+      currentRoadviewStore = null;
+      routeStartStore = null;
+      routeEndStore = null;
+
+      document.getElementById(&quot;storeList&quot;).innerHTML = &quot;&quot;;
+      renderDefaultMessage();
+      renderRouteInfo();
+    }
+
+    function hasValidCoords(store) {
+      return (
+        store.lat !== undefined &amp;&amp;
+        store.lng !== undefined &amp;&amp;
+        store.lat !== null &amp;&amp;
+        store.lng !== null &amp;&amp;
+        String(store.lat).trim() !== &quot;&quot; &amp;&amp;
+        String(store.lng).trim() !== &quot;&quot;
+      );
+    }
+
+    function buildStoreMarker(store, coords) {
+      const region = extractRegion(store.address);
+      const marker = new kakao.maps.Marker({
+        position: coords,
+        image: createMarkerImage(getMarkerColor(store)),
+        zIndex: getMarkerZIndex(store)
+      });
+
+      marker.setMap(map);
+
+      const storeData = {
+        ...store,
+        region,
+        coords,
+        marker,
+        infowindow: null
+      };
+
+      kakao.maps.event.addListener(marker, &quot;click&quot;, function() {
+        selectStore(storeData);
+      });
+
+      storeMarkers.push(storeData);
+    }
+
+    function buildMarkersInChunks(validStores, chunkSize = 40) {
+      const taskId = markersBuildTaskId;
+      let index = 0;
+
+      function processChunk() {
+        if (taskId !== markersBuildTaskId) return;
+
+        const end = Math.min(index + chunkSize, validStores.length);
+
+        for (let i = index; i &lt; end; i++) {
+          const store = validStores[i];
+          const coords = new kakao.maps.LatLng(Number(store.lat), Number(store.lng));
+          buildStoreMarker(store, coords);
+        }
+
+        index = end;
+
+        if (index &lt; validStores.length) {
+          requestAnimationFrame(processChunk);
+        } else {
+          updateMarkers(storeMarkers, false);
+          relayoutMapSafely();
+        }
+      }
+
+      requestAnimationFrame(processChunk);
+    }
+
+    function initializeStores() {
+      resetMapData();
+      rebuildStoresForFilter();
+      renderMarkerLegend();
+
+      if (!stores.length) {
+        renderFilterOptions();
+        renderRouteInfo();
+        renderStoreList([]);
+        renderNoResultMessage();
+        return;
+      }
+
+      renderFilterOptions();
+      renderRouteInfo();
+      renderStoreList(storesForFilter);
+      renderDefaultMessage();
+
+      const validStores = stores.filter(hasValidCoords);
+      buildMarkersInChunks(validStores, 40);
+    }
+
+    async function loadStoresFromSheet() {
+      if (!SHEET_API_URL) {
+        alert(&quot;SHEET_API_URL을 먼저 입력해 주세요.&quot;);
+        return;
+      }
+
+      try {
+        const response = await fetch(SHEET_API_URL, { cache: &quot;no-store&quot; });
+        const data = await response.json();
+
+        stores = Array.isArray(data) ? data.map(store =&gt; ({
+          ...store,
+          detail_address: store.detail_address ?? &quot;&quot;,
+          operating_days: store.operating_days ?? &quot;&quot;,
+          operating_hours: store.operating_hours ?? store.hours ?? store.business_hours ?? &quot;&quot;,
+          break_time: store.break_time ?? store.breakTime ?? &quot;&quot;,
+          lat: store.lat ?? store.latitude ?? &quot;&quot;,
+          lng: store.lng ?? store.longitude ?? &quot;&quot;
+        })) : [];
+
+        initializeStores();
+      } catch (error) {
+        console.error(&quot;매장 데이터 불러오기 실패:&quot;, error);
+        alert(&quot;구글시트 매장 데이터를 불러오지 못했습니다.&quot;);
+      }
+    }
+
+    function startNavigationFromRoute() {
+      const destinationStore = routeEndStore || getSelectedStoreData();
+
+      if (!destinationStore) {
+        alert(&quot;도착지로 사용할 매장을 먼저 선택하거나 설정해 주세요.&quot;);
+        return;
+      }
+
+      if (!window.Kakao) {
+        alert(&quot;카카오 SDK가 로드되지 않았습니다.&quot;);
+        return;
+      }
+
+      if (!Kakao.isInitialized()) {
+        try {
+          Kakao.init(&quot;964655d971d3d19d9cfac4fa73893f9e&quot;);
+        } catch (error) {
+          console.error(error);
+          alert(&quot;카카오 SDK 초기화에 실패했습니다.&quot;);
+          return;
+        }
+      }
+
+      if (!Kakao.Navi || typeof Kakao.Navi.start !== &quot;function&quot;) {
+        alert(&quot;카카오내비 기능을 사용할 수 없습니다. SDK 설정을 확인해 주세요.&quot;);
+        return;
+      }
+
+      if (isMobileDevice()) {
+        const naviOptions = {
+          name: destinationStore.name,
+          x: Number(destinationStore.coords.getLng()),
+          y: Number(destinationStore.coords.getLat()),
+          coordType: &quot;wgs84&quot;,
+          vehicleType: 1,
+          rpOption: 100
+        };
+
+        if (routeStartStore) {
+          naviOptions.sX = Number(routeStartStore.coords.getLng());
+          naviOptions.sY = Number(routeStartStore.coords.getLat());
+        }
+
+        try {
+          Kakao.Navi.start(naviOptions);
+        } catch (error) {
+          console.error(&quot;Kakao.Navi.start error:&quot;, error);
+          alert(&quot;카카오내비 실행에 실패했습니다. 카카오 디벨로퍼스에 현재 접속 도메인이 등록되어 있는지 확인해 주세요.&quot;);
+        }
+      } else {
+        alert(&quot;카카오내비 길찾기는 모바일에서만 실행됩니다.&quot;);
+      }
+    }
+
+    kakao.maps.event.addListener(map, &quot;mousemove&quot;, function(mouseEvent) {
+      if (!isRoadviewPickMode || !roadviewPickerOverlay || !isRoadviewPickerVisible) return;
+      roadviewPickerOverlay.setPosition(mouseEvent.latLng);
+    });
+
+    kakao.maps.event.addListener(map, &quot;click&quot;, function(mouseEvent) {
+      if (!isRoadviewPickMode) return;
+
+      const clickedPosition = mouseEvent.latLng;
+
+      if (roadviewPickerOverlay) {
+        roadviewPickerOverlay.setPosition(clickedPosition);
+        roadviewPickerOverlay.setMap(null);
+      }
+
+      isRoadviewPickerVisible = false;
+      openRoadviewAtPosition(clickedPosition, &quot;선택 위치 로드뷰&quot;);
+    });
+
+    document.getElementById(&quot;searchInput&quot;).addEventListener(&quot;keyup&quot;, function(event) {
+      if (event.key === &quot;Enter&quot;) applyFilters();
+    });
+
+    window.addEventListener(&quot;load&quot;, function() {
+      relayoutMapSafely();
+    });
+
+    window.addEventListener(&quot;resize&quot;, function() {
+      relayoutMapSafely();
+    });
+
+    window.addEventListener(&quot;orientationchange&quot;, function() {
+      relayoutMapSafely();
+    });
+
+    document.addEventListener(&quot;visibilitychange&quot;, function() {
+      if (!document.hidden) relayoutMapSafely();
+    });
+
+    loadStoresFromSheet();
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+    <iframe id="map1" class="map-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;ko&quot;&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot; /&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot; /&gt;
+  &lt;title&gt;신규 매장 지도&lt;/title&gt;
+  &lt;style&gt;
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #f8f9fb;
+    }
+
+    body { min-height: 100vh; }
+
+    .layout {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 390px;
+      min-width: 390px;
+      background: #fff;
+      border-right: 1px solid #e5e5e5;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.3s ease, min-width 0.3s ease, height 0.3s ease;
+    }
+
+    .sidebar.collapsed {
+      width: 0;
+      min-width: 0;
+      border-right: none;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 20px 16px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .sidebar-title {
+      margin: 0 0 14px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+    }
+
+    .search-box button,
+    .filter-actions button,
+    .route-actions button,
+    .selected-actions button,
+    .roadview-header button,
+    .roadview-toolbar button,
+    .marker-legend-close,
+    .marker-legend-toggle {
+      padding: 10px 14px;
+      font-size: 14px;
+      border: none;
+      background: #222;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .filter-box select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    .filter-actions,
+    .selected-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filter-actions button.secondary,
+    .route-actions button.secondary,
+    .selected-actions button.secondary {
+      background: #e9ecef;
+      color: #222;
+    }
+
+    .route-box {
+      padding: 14px 16px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fffdf7;
+      flex-shrink: 0;
+    }
+
+    .route-box h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .route-row {
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 4px;
+      color: #444;
+    }
+
+    .route-label {
+      display: inline-block;
+      width: 52px;
+      font-weight: 700;
+      color: #222;
+    }
+
+    .route-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: nowrap;
+    }
+
+    .route-actions button {
+      width: calc(50% - 4px);
+    }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .selected-store {
+      padding: 16px;
+      border-bottom: 1px solid #f0f0f0;
+      background: #fafafa;
+      min-height: 250px;
+      flex-shrink: 0;
+    }
+
+    .selected-store h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .selected-store .row {
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .selected-store .label {
+      display: inline-block;
+      width: 72px;
+      font-weight: 700;
+      color: #333;
+      vertical-align: top;
+    }
+
+    .store-list {
+      flex: none;
+      overflow: visible;
+      padding: 8px;
+    }
+
+    .store-item {
+      padding: 12px;
+      border: 1px solid #ececec;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: 0.2s;
+      background: #fff;
+    }
+
+    .store-item:hover {
+      background: #f7f7f7;
+    }
+
+    .store-item.active {
+      border-color: #222;
+      background: #f3f3f3;
+    }
+
+    .store-item-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .store-item-meta {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 4px;
+      word-break: keep-all;
+    }
+
+    .map-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #f1f3f5;
+    }
+
+    .sidebar-toggle {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 20;
+      padding: 10px 14px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #222;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      min-width: 84px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .top-buttons {
+      position: absolute;
+      top: 20px;
+      right: 45px;
+      display: flex;
+      gap: 12px;
+      z-index: 20;
+    }
+
+    .top-buttons button {
+      padding: 10px 14px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #222;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+      min-width: 90px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .roadview-pick-btn.active {
+      background: #0b63ce;
+    }
+
+    .pin-mode-btn.active {
+      background: #0b63ce;
+    }
+
+    .roadview-wrap {
+      position: absolute;
+      top: 70px;
+      right: 20px;
+      width: 420px;
+      height: 320px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      z-index: 20;
+      display: none;
+    }
+
+    .roadview-wrap.open {
+      display: block;
+    }
+
+    .roadview-wrap.expanded {
+      top: 70px;
+      left: 20px;
+      right: 20px;
+      width: auto;
+      height: calc(100% - 90px);
+    }
+
+    .roadview-header {
+      height: 44px;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .roadview-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .roadview-header button,
+    .roadview-toolbar button {
+      width: auto;
+      padding: 6px 10px;
+    }
+
+    #roadview {
+      width: 100%;
+      height: calc(100% - 44px);
+    }
+
+    .info-box {
+      padding: 16px;
+      padding-right: 42px;
+      width: 360px;
+      line-height: 1.8;
+      font-size: 14px;
+      word-break: keep-all;
+      position: relative;
+    }
+
+    .info-box h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .info-box strong {
+      display: inline-block;
+      width: 70px;
+      vertical-align: top;
+    }
+
+    .info-window-close {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: #666;
+      font-size: 18px;
+      line-height: 24px;
+      text-align: center;
+      cursor: pointer;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    .info-window-close:hover {
+      color: #111;
+    }
+
+    .roadview-picker-pin {
+      width: 26px;
+      height: 38px;
+      background: url(&quot;https://t1.daumcdn.net/localimg/localimages/07/2018/pc/roadview_minimap_wk_2018.png&quot;) no-repeat;
+      background-position: -122px 0;
+      transform: translate(-13px, -36px);
+      pointer-events: none;
+    }
+
+    .marker-legend {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      z-index: 20;
+      width: 210px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+    }
+
+    .marker-legend.hidden {
+      display: none;
+    }
+
+    .marker-legend-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #fafafa;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .marker-legend-close {
+      background: #e9ecef;
+      color: #222;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .marker-legend-list {
+      padding: 10px 12px;
+    }
+
+    .marker-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .marker-legend-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .marker-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      flex-shrink: 0;
+    }
+
+    .marker-green { background: #2f9e44; }
+    .marker-yellow { background: #f08c00; }
+    .marker-red { background: #e03131; }
+    .marker-blue { background: #1c7ed6; }
+    .marker-gray { background: #ced4da; }
+    .marker-purple { background: #7950f2; }
+    .marker-brown { background: #8b5e3c; }
+
+    .marker-legend-toggle {
+      position: absolute;
+      right: 20px;
+      bottom: 20px;
+      z-index: 20;
+      font-size: 13px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    }
+
+    .status-top {
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      font-weight: 800;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .status-open {
+      background: #e6f4ea;
+      color: #2f9e44;
+    }
+
+    .status-break {
+      background: #fff4e6;
+      color: #f08c00;
+    }
+
+    .status-closed {
+      background: #fff5f5;
+      color: #e03131;
+    }
+
+    .status-empty {
+      background: #f1f3f5;
+      color: #868e96;
+    }
+
+    .status-sub {
+      font-size: 15px;
+      font-weight: 800;
+      margin-top: 0;
+    }
+
+    @media (max-width: 768px) {
+      html, body { height: auto; }
+
+      .layout {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .map-wrap {
+        order: 1;
+        width: 100%;
+        height: 56dvh;
+        min-height: 380px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        order: 2;
+        width: 100%;
+        min-width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid #e5e5e5;
+      }
+
+      .sidebar.collapsed {
+        width: 100%;
+        min-width: 100%;
+        height: 0;
+        min-height: 0;
+        border-bottom: none;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        min-height: 380px;
+      }
+
+      .info-box {
+        width: 240px;
+        padding: 10px;
+        padding-right: 34px;
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .info-box h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+
+      .info-box strong { width: 54px; }
+
+      .info-window-close {
+        top: 8px;
+        right: 8px;
+        width: 22px;
+        height: 22px;
+        font-size: 16px;
+        line-height: 22px;
+      }
+
+      .search-box {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .selected-store { min-height: auto; }
+
+      .top-buttons {
+        position: absolute;
+        top: auto;
+        left: 12px;
+        right: auto;
+        bottom: 12px;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 6px;
+        z-index: 20;
+      }
+
+      .top-buttons button {
+        padding: 7px 9px;
+        font-size: 11px;
+        min-width: 72px;
+        width: 72px;
+      }
+
+      .marker-legend-toggle {
+        position: absolute;
+        right: 12px;
+        bottom: 56px;
+        padding: 8px 10px;
+        font-size: 12px;
+        z-index: 20;
+      }
+
+      .sidebar-toggle {
+        position: absolute;
+        top: auto;
+        left: auto;
+        right: 12px;
+        bottom: 12px;
+        padding: 7px 9px;
+        font-size: 11px;
+        min-width: 72px;
+        width: 72px;
+        z-index: 21;
+      }
+
+      .roadview-wrap {
+        top: 56px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+        height: 240px;
+      }
+
+      .roadview-wrap.expanded {
+        top: 56px;
+        left: 12px;
+        right: 12px;
+        width: auto;
+        height: calc(100% - 68px);
+      }
+
+      .store-item-title { font-size: 14px; }
+
+      .store-item-meta,
+      .selected-store .row,
+      .route-row {
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .selected-store .label { width: 60px; }
+
+      .filter-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .marker-legend {
+        right: 12px;
+        bottom: 100px;
+        width: 180px;
+      }
+
+      .marker-legend-header {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+
+      .marker-legend-close {
+        padding: 5px 8px;
+        font-size: 11px;
+      }
+
+      .marker-legend-list {
+        padding: 8px 10px;
+      }
+
+      .marker-legend-item {
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div class=&quot;layout&quot;&gt;
+    &lt;aside class=&quot;sidebar&quot; id=&quot;sidebar&quot;&gt;
+      &lt;div class=&quot;sidebar-header&quot;&gt;
+        &lt;h1 class=&quot;sidebar-title&quot;&gt;매장 지도&lt;/h1&gt;
+
+        &lt;div class=&quot;search-box&quot;&gt;
+          &lt;input type=&quot;text&quot; id=&quot;searchInput&quot; placeholder=&quot;매장명 / 확인용 / 주소 / 상세주소 검색&quot; /&gt;
+          &lt;button type=&quot;button&quot; onclick=&quot;applyFilters()&quot;&gt;검색&lt;/button&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;filter-grid&quot;&gt;
+          &lt;div class=&quot;filter-box&quot;&gt;
+            &lt;select id=&quot;brandFilter&quot; onchange=&quot;applyFilters()&quot;&gt;
+              &lt;option value=&quot;&quot;&gt;전체 확인용&lt;/option&gt;
+            &lt;/select&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;filter-box&quot;&gt;
+            &lt;select id=&quot;regionFilter&quot; onchange=&quot;applyFilters()&quot;&gt;
+              &lt;option value=&quot;&quot;&gt;전체 지역&lt;/option&gt;
+            &lt;/select&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;filter-box&quot;&gt;
+            &lt;select id=&quot;openFilter&quot; onchange=&quot;applyFilters()&quot;&gt;
+              &lt;option value=&quot;&quot;&gt;전체 상태&lt;/option&gt;
+              &lt;option value=&quot;open&quot;&gt;운영중&lt;/option&gt;
+              &lt;option value=&quot;break&quot;&gt;브레이크타임&lt;/option&gt;
+              &lt;option value=&quot;closed&quot;&gt;운영종료&lt;/option&gt;
+              &lt;option value=&quot;empty&quot;&gt;운영정보 없음&lt;/option&gt;
+            &lt;/select&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class=&quot;filter-actions&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;secondary&quot; onclick=&quot;resetFilters()&quot;&gt;필터 초기화&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;route-box&quot;&gt;
+        &lt;h3&gt;길찾기 설정&lt;/h3&gt;
+        &lt;div class=&quot;route-row&quot;&gt;&lt;span class=&quot;route-label&quot;&gt;출발지&lt;/span&gt;&lt;span id=&quot;routeStartText&quot;&gt;선택 안 됨&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;route-row&quot;&gt;&lt;span class=&quot;route-label&quot;&gt;도착지&lt;/span&gt;&lt;span id=&quot;routeEndText&quot;&gt;선택 안 됨&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;route-actions&quot;&gt;
+          &lt;button type=&quot;button&quot; onclick=&quot;startNavigationFromRoute()&quot;&gt;길찾기&lt;/button&gt;
+          &lt;button type=&quot;button&quot; class=&quot;secondary&quot; onclick=&quot;clearRouteSelection()&quot;&gt;초기화&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;div class=&quot;sidebar-scroll&quot; id=&quot;sidebarScroll&quot;&gt;
+        &lt;div class=&quot;selected-store&quot; id=&quot;selectedStore&quot;&gt;
+          &lt;h2&gt;매장을 선택하세요&lt;/h2&gt;
+          &lt;div class=&quot;row&quot;&gt;아래 목록이나 지도 핀을 누르면 상세 정보가 표시됩니다.&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;store-list&quot; id=&quot;storeList&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/aside&gt;
+
+    &lt;div class=&quot;map-wrap&quot; id=&quot;mapWrap&quot;&gt;
+      &lt;button id=&quot;sidebarToggle&quot; class=&quot;sidebar-toggle&quot; onclick=&quot;toggleSidebar()&quot;&gt;필터 닫기&lt;/button&gt;
+
+      &lt;div class=&quot;top-buttons&quot;&gt;
+        &lt;button type=&quot;button&quot; id=&quot;roadviewToggle&quot; onclick=&quot;toggleRoadviewPanel()&quot;&gt;로드뷰&lt;/button&gt;
+        &lt;button type=&quot;button&quot; id=&quot;roadviewPickToggle&quot; class=&quot;roadview-pick-btn&quot; onclick=&quot;toggleRoadviewPickMode()&quot;&gt;찍기&lt;/button&gt;
+        &lt;button type=&quot;button&quot; id=&quot;pinModeToggle&quot; class=&quot;pin-mode-btn&quot; onclick=&quot;togglePinMode()&quot;&gt;운영상태&lt;/button&gt;
+      &lt;/div&gt;
+
+      &lt;div id=&quot;markerLegend&quot; class=&quot;marker-legend hidden&quot;&gt;
+        &lt;div class=&quot;marker-legend-header&quot;&gt;
+          &lt;span id=&quot;markerLegendTitle&quot;&gt;핀 색상 안내&lt;/span&gt;
+          &lt;button type=&quot;button&quot; class=&quot;marker-legend-close&quot; onclick=&quot;toggleMarkerLegend()&quot;&gt;닫기&lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;marker-legend-list&quot; id=&quot;markerLegendList&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+
+      &lt;button
+        type=&quot;button&quot;
+        id=&quot;markerLegendToggle&quot;
+        class=&quot;marker-legend-toggle&quot;
+        onclick=&quot;toggleMarkerLegend()&quot;
+      &gt;
+        핀
+      &lt;/button&gt;
+
+      &lt;div id=&quot;map&quot;&gt;&lt;/div&gt;
+
+      &lt;div id=&quot;roadviewWrap&quot; class=&quot;roadview-wrap&quot;&gt;
+        &lt;div class=&quot;roadview-header&quot;&gt;
+          &lt;span id=&quot;roadviewTitle&quot;&gt;로드뷰&lt;/span&gt;
+          &lt;div class=&quot;roadview-toolbar&quot;&gt;
+            &lt;button type=&quot;button&quot; id=&quot;roadviewExpandBtn&quot; onclick=&quot;toggleRoadviewSize()&quot;&gt;크게 보기&lt;/button&gt;
+            &lt;button type=&quot;button&quot; onclick=&quot;closeRoadviewPanel()&quot;&gt;닫기&lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div id=&quot;roadview&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;script src=&quot;https://dapi.kakao.com/v2/maps/sdk.js?appkey=ca5353f84284c3cb5778577cb87e4f57&amp;libraries=services&quot;&gt;&lt;/script&gt;
+  &lt;script src=&quot;https://developers.kakao.com/sdk/js/kakao.min.js&quot;&gt;&lt;/script&gt;
+
+  &lt;script&gt;
+    if (window.Kakao &amp;&amp; !window.Kakao.isInitialized()) {
+      Kakao.init(&quot;ca5353f84284c3cb5778577cb87e4f57&quot;);
+    }
+
+    const SHEET_API_URL = &quot;https://script.google.com/macros/s/AKfycbwLPCGhGrGqmxssyX3D6lXAe9cvaJ-zyKgiv8x8Hq4GBFzqmfblFROA3G2AWBAi9fYM/exec&quot;;
+
+    let stores = [];
+    let storesForFilter = [];
+    let storeMarkers = [];
+    let openedInfowindow = null;
+    let selectedStoreName = null;
+    let currentRoadviewStore = null;
+
+    let routeStartStore = null;
+    let routeEndStore = null;
+
+    let isRoadviewExpanded = false;
+    let isRoadviewPickMode = false;
+    let roadviewPickerOverlay = null;
+    let isRoadviewPickerVisible = false;
+
+    let relayoutTimer = null;
+    let markersBuildTaskId = 0;
+
+    let currentPinMode = &quot;check&quot;;
+
+    const mapContainer = document.getElementById(&quot;map&quot;);
+    const mapWrapEl = document.getElementById(&quot;mapWrap&quot;);
+    const sidebarEl = document.getElementById(&quot;sidebar&quot;);
+
+    const map = new kakao.maps.Map(mapContainer, {
+      center: new kakao.maps.LatLng(36.5, 127.8),
+      level: 13
+    });
+
+    const zoomControl = new kakao.maps.ZoomControl();
+    map.addControl(zoomControl, kakao.maps.ControlPosition.RIGHT);
+
+    const roadview = new kakao.maps.Roadview(document.getElementById(&quot;roadview&quot;));
+    const roadviewClient = new kakao.maps.RoadviewClient();
+
+    function createMarkerSvg(color) {
+      return `
+        &lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;22&quot; height=&quot;32&quot; viewBox=&quot;0 0 28 40&quot; fill=&quot;none&quot;&gt;
+          &lt;path d=&quot;M14 1.5C7.096 1.5 1.5 7.096 1.5 14c0 9.646 10.404 20.182 11.818 21.57a1 1 0 0 0 1.364 0C16.096 34.182 26.5 23.646 26.5 14 26.5 7.096 20.904 1.5 14 1.5Z&quot; fill=&quot;${color}&quot; stroke=&quot;#FFFFFF&quot; stroke-width=&quot;2&quot;/&gt;
+          &lt;circle cx=&quot;14&quot; cy=&quot;14&quot; r=&quot;5.2&quot; fill=&quot;#FFFFFF&quot; fill-opacity=&quot;0.96&quot;/&gt;
+        &lt;/svg&gt;
+      `.trim();
+    }
+
+    function makeMarkerImage(color) {
+      const svg = createMarkerSvg(color);
+      const imageSrc = &quot;data:image/svg+xml;charset=UTF-8,&quot; + encodeURIComponent(svg);
+      return new kakao.maps.MarkerImage(
+        imageSrc,
+        new kakao.maps.Size(22, 32),
+        {
+          offset: new kakao.maps.Point(11, 32)
+        }
+      );
+    }
+
+    const checkMarkerColors = {
+      done: &quot;#2f9e44&quot;,
+      needCheck: &quot;#1c7ed6&quot;,
+      notVisited: &quot;#f08c00&quot;,
+      other: &quot;#7950f2&quot;,
+      empty: &quot;#ced4da&quot;
+    };
+
+    const statusMarkerColors = {
+      open: &quot;#2f9e44&quot;,
+      break: &quot;#f08c00&quot;,
+      closed: &quot;#868e96&quot;,
+      empty: &quot;#8b5e3c&quot;
+    };
+
+    function getCheckPinColor(type) {
+      const value = String(type || &quot;&quot;).trim();
+
+      if (!value) return checkMarkerColors.empty;
+      if (value === &quot;1팀&quot;) return checkMarkerColors.done;
+      if (value === &quot;2팀&quot;) return checkMarkerColors.needCheck;
+      if (value === &quot;3&quot;) return checkMarkerColors.notVisited;
+      if (value === &quot;기타&quot;) return checkMarkerColors.other;
+
+      return checkMarkerColors.other;
+    }
+
+    function parseTimeRange(text) {
+      const value = String(text || &quot;&quot;).trim();
+      const match = value.match(/^(\d{2}:\d{2})~(\d{2}:\d{2})$/);
+      if (!match) return null;
+
+      const [startH, startM] = match[1].split(&quot;:&quot;).map(Number);
+      const [endH, endM] = match[2].split(&quot;:&quot;).map(Number);
+
+      return {
+        start: startH * 60 + startM,
+        end: endH * 60 + endM
+      };
+    }
+
+    function formatRemainTime(minutes) {
+      const safeMinutes = Math.max(0, Math.floor(minutes));
+
+      if (safeMinutes &lt;= 0) return &quot;곧&quot;;
+
+      const h = Math.floor(safeMinutes / 60);
+      const m = safeMinutes % 60;
+
+      if (h &gt; 0 &amp;&amp; m &gt; 0) return `${h}시간 ${m}분`;
+      if (h &gt; 0) return `${h}시간`;
+      return `${m}분`;
+    }
+
+    function getStatusClass(status) {
+      if (status === &quot;운영중&quot;) return &quot;status-open&quot;;
+      if (status === &quot;브레이크타임&quot;) return &quot;status-break&quot;;
+      if (status === &quot;정보없음&quot;) return &quot;status-empty&quot;;
+      return &quot;status-closed&quot;;
+    }
+
+    function getStoreStatus(store) {
+      const now = new Date();
+      const dayNames = [&quot;일&quot;, &quot;월&quot;, &quot;화&quot;, &quot;수&quot;, &quot;목&quot;, &quot;금&quot;, &quot;토&quot;];
+      const today = dayNames[now.getDay()];
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+      const operatingDays = String(store.operating_days || &quot;&quot;).trim();
+      const operatingHours = String(store.operating_hours || &quot;&quot;).trim();
+      const breakTime = String(store.break_time || &quot;&quot;).trim();
+
+      if (!operatingDays || !operatingHours) {
+        return {
+          status: &quot;정보없음&quot;,
+          message: &quot;운영 정보 없음&quot;
+        };
+      }
+
+      const validDays = operatingDays
+        .split(&quot;,&quot;)
+        .map(v =&gt; v.trim())
+        .filter(Boolean);
+
+      const range = parseTimeRange(operatingHours);
+      if (!range) {
+        return {
+          status: &quot;정보없음&quot;,
+          message: &quot;운영 정보 없음&quot;
+        };
+      }
+
+      if (!validDays.includes(today)) {
+        return {
+          status: &quot;미운영&quot;,
+          message: &quot;운영 종료&quot;
+        };
+      }
+
+      if (nowMinutes &lt; range.start || nowMinutes &gt; range.end) {
+        return {
+          status: &quot;미운영&quot;,
+          message: &quot;운영 종료&quot;
+        };
+      }
+
+      const breakRange = breakTime ? parseTimeRange(breakTime) : null;
+
+      if (breakRange &amp;&amp; nowMinutes &gt;= breakRange.start &amp;&amp; nowMinutes &lt;= breakRange.end) {
+        return {
+          status: &quot;브레이크타임&quot;,
+          message: `${formatRemainTime(breakRange.end - nowMinutes)} 후 운영 재개`
+        };
+      }
+
+      if (breakRange &amp;&amp; nowMinutes &lt; breakRange.start) {
+        return {
+          status: &quot;운영중&quot;,
+          message: `${formatRemainTime(breakRange.start - nowMinutes)} 후 브레이크타임`
+        };
+      }
+
+      return {
+        status: &quot;운영중&quot;,
+        message: `${formatRemainTime(range.end - nowMinutes)} 후 운영 종료`
+      };
+    }
+
+    function isStoreOpen(store) {
+      const statusInfo = getStoreStatus(store);
+      return statusInfo.status === &quot;운영중&quot;;
+    }
+
+    function getOpenStatusPinColor(store) {
+      const statusInfo = getStoreStatus(store);
+
+      if (statusInfo.status === &quot;운영중&quot;) return statusMarkerColors.open;
+      if (statusInfo.status === &quot;브레이크타임&quot;) return statusMarkerColors.break;
+      if (statusInfo.status === &quot;미운영&quot;) return statusMarkerColors.closed;
+      return statusMarkerColors.empty;
+    }
+
+    function getPinPriority(store) {
+      if (currentPinMode === &quot;open&quot;) {
+        const status = getStoreStatus(store).status;
+
+        if (status === &quot;정보없음&quot;) return 0;
+        if (status === &quot;미운영&quot;) return 1;
+        if (status === &quot;브레이크타임&quot;) return 2;
+        if (status === &quot;운영중&quot;) return 3;
+        return 0;
+      }
+
+      const value = String(store.brand || &quot;&quot;).trim();
+      if (value === &quot;1팀&quot;) return 4;
+      if (value === &quot;2팀&quot;) return 3;
+      if (value === &quot;3팀&quot;) return 2;
+      if (value === &quot;기타&quot;) return 1;
+      if (!value) return 0;
+      return 3;
+    }
+
+    function getMarkerImage(store) {
+      if (currentPinMode === &quot;open&quot;) {
+        return makeMarkerImage(getOpenStatusPinColor(store));
+      }
+      return makeMarkerImage(getCheckPinColor(store.brand));
+    }
+
+    function normalizeText(text) {
+      return String(text || &quot;&quot;).toLowerCase().replace(/\s+/g, &quot;&quot;).trim();
+    }
+
+    function createUniqueOptions(arr) {
+      return [...new Set(arr.filter(Boolean))].sort((a, b) =&gt; a.localeCompare(b, &quot;ko&quot;));
+    }
+
+    function extractRegion(address) {
+      const text = String(address || &quot;&quot;).trim();
+      if (!text) return &quot;기타&quot;;
+      if (text.startsWith(&quot;서울&quot;)) return &quot;서울&quot;;
+      if (text.startsWith(&quot;경기&quot;)) return &quot;경기&quot;;
+      if (text.startsWith(&quot;인천&quot;)) return &quot;인천&quot;;
+      if (text.startsWith(&quot;부산&quot;)) return &quot;부산&quot;;
+      if (text.startsWith(&quot;대구&quot;)) return &quot;대구&quot;;
+      if (text.startsWith(&quot;광주&quot;)) return &quot;광주&quot;;
+      if (text.startsWith(&quot;대전&quot;)) return &quot;대전&quot;;
+      if (text.startsWith(&quot;울산&quot;)) return &quot;울산&quot;;
+      if (text.startsWith(&quot;세종&quot;)) return &quot;세종&quot;;
+      if (text.startsWith(&quot;강원&quot;)) return &quot;강원&quot;;
+      if (text.startsWith(&quot;충북&quot;)) return &quot;충북&quot;;
+      if (text.startsWith(&quot;충남&quot;)) return &quot;충남&quot;;
+      if (text.startsWith(&quot;전북&quot;)) return &quot;전북&quot;;
+      if (text.startsWith(&quot;전남&quot;)) return &quot;전남&quot;;
+      if (text.startsWith(&quot;경북&quot;)) return &quot;경북&quot;;
+      if (text.startsWith(&quot;경남&quot;)) return &quot;경남&quot;;
+      if (text.startsWith(&quot;제주&quot;)) return &quot;제주&quot;;
+      return text.split(&quot; &quot;)[0] || &quot;기타&quot;;
+    }
+
+    function rebuildStoresForFilter() {
+      storesForFilter = stores.map(store =&gt; ({
+        ...store,
+        region: extractRegion(store.address)
+      }));
+    }
+
+    function isMobileDevice() {
+      return window.matchMedia(&quot;(max-width: 768px)&quot;).matches;
+    }
+
+    function relayoutMapSafely() {
+      clearTimeout(relayoutTimer);
+      relayoutTimer = setTimeout(() =&gt; {
+        map.relayout();
+      }, 120);
+    }
+
+    function renderMarkerLegend() {
+      const titleEl = document.getElementById(&quot;markerLegendTitle&quot;);
+      const listEl = document.getElementById(&quot;markerLegendList&quot;);
+      if (!titleEl || !listEl) return;
+
+      if (currentPinMode === &quot;open&quot;) {
+        titleEl.textContent = &quot;운영상태 핀 안내&quot;;
+        listEl.innerHTML = `
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${statusMarkerColors.open}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;운영중&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${statusMarkerColors.break}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;브레이크타임&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${statusMarkerColors.closed}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;운영종료&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${statusMarkerColors.empty}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;운영정보 없음&lt;/span&gt;
+          &lt;/div&gt;
+        `;
+      } else {
+        titleEl.textContent = &quot;확인용 핀 안내&quot;;
+        listEl.innerHTML = `
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${checkMarkerColors.done}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;1팀&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${checkMarkerColors.needCheck}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;2팀&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${checkMarkerColors.notVisited}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;3팀&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${checkMarkerColors.other}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;기타&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;marker-legend-item&quot;&gt;
+            &lt;span class=&quot;marker-dot&quot; style=&quot;background:${checkMarkerColors.empty}&quot;&gt;&lt;/span&gt;
+            &lt;span&gt;빈칸&lt;/span&gt;
+          &lt;/div&gt;
+        `;
+      }
+    }
+
+    function toggleMarkerLegend() {
+      const legend = document.getElementById(&quot;markerLegend&quot;);
+      const toggleBtn = document.getElementById(&quot;markerLegendToggle&quot;);
+
+      if (!legend || !toggleBtn) return;
+
+      const isHidden = legend.classList.contains(&quot;hidden&quot;);
+
+      if (isHidden) {
+        renderMarkerLegend();
+        legend.classList.remove(&quot;hidden&quot;);
+        toggleBtn.style.display = &quot;none&quot;;
+      } else {
+        legend.classList.add(&quot;hidden&quot;);
+        toggleBtn.style.display = &quot;block&quot;;
+      }
+    }
+
+    function refreshMarkerImages() {
+      const orderedStores = [...storeMarkers].sort((a, b) =&gt; getPinPriority(a) - getPinPriority(b));
+
+      orderedStores.forEach(store =&gt; {
+        if (store.marker) {
+          const isVisible = !!store.marker.getMap();
+          store.marker.setMap(null);
+          store.marker.setImage(getMarkerImage(store));
+          store.marker.setMap(isVisible ? map : null);
+        }
+      });
+    }
+
+    function togglePinMode() {
+      const button = document.getElementById(&quot;pinModeToggle&quot;);
+
+      if (currentPinMode === &quot;check&quot;) {
+        currentPinMode = &quot;open&quot;;
+        button.textContent = &quot;확인중&quot;;
+        button.classList.add(&quot;active&quot;);
+      } else {
+        currentPinMode = &quot;check&quot;;
+        button.textContent = &quot;운영상태&quot;;
+        button.classList.remove(&quot;active&quot;);
+      }
+
+      renderMarkerLegend();
+      refreshMarkerImages();
+
+      const selected = getSelectedStoreData();
+      if (selected) {
+        renderSelectedStore(selected);
+        closeAllInfoWindows();
+        openStoreInfo(selected);
+      }
+    }
+
+    function getCurrentFilterValues() {
+      return {
+        keyword: normalizeText(document.getElementById(&quot;searchInput&quot;).value),
+        brand: document.getElementById(&quot;brandFilter&quot;).value,
+        region: document.getElementById(&quot;regionFilter&quot;).value,
+        openFilter: document.getElementById(&quot;openFilter&quot;).value
+      };
+    }
+
+    function getFilteredBaseStores(filters = {}) {
+      const { keyword = &quot;&quot;, brand = &quot;&quot;, region = &quot;&quot;, openFilter = &quot;&quot; } = filters;
+      let results = [...storesForFilter];
+
+      if (brand) results = results.filter(store =&gt; store.brand === brand);
+      if (region) results = results.filter(store =&gt; store.region === region);
+
+      if (openFilter) {
+        results = results.filter(store =&gt; {
+          const status = getStoreStatus(store).status;
+          if (openFilter === &quot;open&quot;) return status === &quot;운영중&quot;;
+          if (openFilter === &quot;break&quot;) return status === &quot;브레이크타임&quot;;
+          if (openFilter === &quot;closed&quot;) return status === &quot;미운영&quot;;
+          if (openFilter === &quot;empty&quot;) return status === &quot;정보없음&quot;;
+          return true;
+        });
+      }
+
+      if (keyword) {
+        results = results.filter(store =&gt; {
+          const text = normalizeText(
+            `${store.name} ${store.brand} ${store.address} ${store.detail_address} ${store.region} ${store.note} ${store.operating_hours} ${store.operating_days} ${store.break_time} ${store.phone}`
+          );
+          return text.includes(keyword);
+        });
+      }
+
+      return results;
+    }
+
+    function getFilteredMarkerStores(filters = {}) {
+      const baseResults = getFilteredBaseStores(filters);
+      const names = new Set(baseResults.map(store =&gt; store.name));
+      return storeMarkers.filter(store =&gt; names.has(store.name));
+    }
+
+    function renderFilterOptions() {
+      const brandFilter = document.getElementById(&quot;brandFilter&quot;);
+      const regionFilter = document.getElementById(&quot;regionFilter&quot;);
+
+      const current = getCurrentFilterValues();
+
+      const brands = createUniqueOptions(
+        getFilteredBaseStores({
+          keyword: current.keyword,
+          region: current.region,
+          openFilter: current.openFilter
+        }).map(store =&gt; store.brand)
+      );
+
+      const regions = createUniqueOptions(
+        getFilteredBaseStores({
+          keyword: current.keyword,
+          brand: current.brand,
+          openFilter: current.openFilter
+        }).map(store =&gt; store.region)
+      );
+
+      brandFilter.innerHTML = '&lt;option value=&quot;&quot;&gt;전체 확인용&lt;/option&gt;';
+      regionFilter.innerHTML = '&lt;option value=&quot;&quot;&gt;전체 지역&lt;/option&gt;';
+
+      brands.forEach(value =&gt; brandFilter.appendChild(new Option(value, value)));
+      regions.forEach(value =&gt; regionFilter.appendChild(new Option(value, value)));
+
+      if (brands.includes(current.brand)) brandFilter.value = current.brand;
+      if (regions.includes(current.region)) regionFilter.value = current.region;
+    }
+
+    function renderRouteInfo() {
+      document.getElementById(&quot;routeStartText&quot;).textContent = routeStartStore ? routeStartStore.name : &quot;선택 안 됨&quot;;
+      document.getElementById(&quot;routeEndText&quot;).textContent = routeEndStore ? routeEndStore.name : &quot;선택 안 됨&quot;;
+    }
+
+    function renderSelectedStore(store) {
+      const box = document.getElementById(&quot;selectedStore&quot;);
+
+      if (!store) {
+        box.innerHTML = `
+          &lt;h2&gt;매장을 선택하세요&lt;/h2&gt;
+          &lt;div class=&quot;row&quot;&gt;아래 목록이나 지도 핀을 누르면 상세 정보가 표시됩니다.&lt;/div&gt;
+        `;
+        return;
+      }
+
+      const statusInfo = getStoreStatus(store);
+      const statusClass = getStatusClass(statusInfo.status);
+
+      box.innerHTML = `
+        &lt;div class=&quot;status-top ${statusClass}&quot;&gt;
+          &lt;div class=&quot;status-sub&quot;&gt;${statusInfo.message}&lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;h2&gt;${store.name}&lt;/h2&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;주소&lt;/span&gt;${store.address || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;상세주소&lt;/span&gt;${store.detail_address || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;운영요일&lt;/span&gt;${store.operating_days || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;운영시간&lt;/span&gt;${store.operating_hours || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;브레이크&lt;/span&gt;${store.break_time || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;전화&lt;/span&gt;${store.phone || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;확인용&lt;/span&gt;${store.brand || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;row&quot;&gt;&lt;span class=&quot;label&quot;&gt;비고&lt;/span&gt;${store.note || &quot;-&quot;}&lt;/div&gt;
+        &lt;div class=&quot;selected-actions&quot;&gt;
+          &lt;button type=&quot;button&quot; onclick=&quot;setSelectedAsStart()&quot;&gt;출발지로 설정&lt;/button&gt;
+          &lt;button type=&quot;button&quot; onclick=&quot;setSelectedAsEnd()&quot;&gt;도착지로 설정&lt;/button&gt;
+        &lt;/div&gt;
+      `;
+    }
+
+    function renderDefaultMessage() {
+      renderSelectedStore(null);
+    }
+
+    function renderResultMessage(results) {
+      document.getElementById(&quot;selectedStore&quot;).innerHTML = `
+        &lt;h2&gt;검색 결과 ${results.length}개&lt;/h2&gt;
+        &lt;div class=&quot;row&quot;&gt;아래 목록이나 지도 핀에서 원하는 매장을 선택하세요.&lt;/div&gt;
+      `;
+    }
+
+    function renderNoResultMessage() {
+      document.getElementById(&quot;selectedStore&quot;).innerHTML = `
+        &lt;h2&gt;검색 결과 없음&lt;/h2&gt;
+        &lt;div class=&quot;row&quot;&gt;조건에 맞는 매장이 없습니다.&lt;/div&gt;
+      `;
+    }
+
+    function renderStoreList(items) {
+      const list = document.getElementById(&quot;storeList&quot;);
+      list.innerHTML = &quot;&quot;;
+
+      const sortedItems = [...items].sort((a, b) =&gt;
+        String(a.name || &quot;&quot;).localeCompare(String(b.name || &quot;&quot;), &quot;ko&quot;)
+      );
+
+      const fragment = document.createDocumentFragment();
+
+      sortedItems.forEach(store =&gt; {
+        const statusInfo = getStoreStatus(store);
+
+        const div = document.createElement(&quot;div&quot;);
+        div.className = &quot;store-item&quot; + (selectedStoreName === store.name ? &quot; active&quot; : &quot;&quot;);
+
+        div.innerHTML = `
+          &lt;div class=&quot;store-item-title&quot;&gt;${store.name}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;지역: ${store.region || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;주소: ${store.address || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;상세주소: ${store.detail_address || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;운영요일: ${store.operating_days || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;운영시간: ${store.operating_hours || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;브레이크: ${store.break_time || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;전화: ${store.phone || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;확인용: ${store.brand || &quot;-&quot;}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;안내: ${statusInfo.message}&lt;/div&gt;
+          &lt;div class=&quot;store-item-meta&quot;&gt;비고: ${store.note || &quot;-&quot;}&lt;/div&gt;
+        `;
+
+        div.addEventListener(&quot;click&quot;, function() {
+          selectStore(store);
+        });
+
+        fragment.appendChild(div);
+      });
+
+      list.appendChild(fragment);
+    }
+
+    function updateMarkers(results, shouldFitBounds = false) {
+      const bounds = new kakao.maps.LatLngBounds();
+
+      storeMarkers.forEach(store =&gt; {
+        const visible = results.includes(store);
+        store.marker.setMap(visible ? map : null);
+        if (visible) bounds.extend(store.coords);
+      });
+
+      if (results.length &gt; 0 &amp;&amp; shouldFitBounds) {
+        map.setBounds(bounds);
+      }
+    }
+
+    function closeOpenedInfowindow() {
+      if (openedInfowindow) {
+        openedInfowindow.close();
+        openedInfowindow = null;
+      }
+    }
+
+    function closeAllInfoWindows() {
+      storeMarkers.forEach(store =&gt; {
+        if (store.infowindow) store.infowindow.close();
+      });
+      openedInfowindow = null;
+    }
+
+    function clearSelectedStoreState(options = {}) {
+      const { keepRoute = false } = options;
+
+      closeAllInfoWindows();
+      selectedStoreName = null;
+
+      if (!keepRoute) {
+        routeEndStore = null;
+      }
+
+      const currentResults = getFilteredMarkerStores(getCurrentFilterValues());
+      renderStoreList(currentResults.length ? currentResults : storeMarkers);
+      renderDefaultMessage();
+      renderRouteInfo();
+    }
+
+    function handleInfoWindowClose() {
+      clearSelectedStoreState();
+    }
+
+    function getSelectedStoreData() {
+      return storeMarkers.find(store =&gt; store.name === selectedStoreName) || null;
+    }
+
+    function scrollMapIntoView() {
+      if (!isMobileDevice()) return Promise.resolve();
+
+      return new Promise(resolve =&gt; {
+        mapWrapEl.scrollIntoView({
+          behavior: &quot;smooth&quot;,
+          block: &quot;start&quot;
+        });
+        setTimeout(resolve, 320);
+      });
+    }
+
+    function getOffsetCenter(latlng, offsetY = 0) {
+      const projection = map.getProjection();
+      if (!projection) return latlng;
+
+      const point = projection.pointFromCoords(latlng);
+      const movedPoint = new kakao.maps.Point(point.x, point.y - offsetY);
+      return projection.coordsFromPoint(movedPoint);
+    }
+
+    function moveMapToStore(store) {
+      if (!store || !store.coords) return;
+
+      map.relayout();
+
+      if (isMobileDevice()) {
+        map.setLevel(4);
+        const movedCenter = getOffsetCenter(store.coords, 120);
+        map.setCenter(movedCenter);
+      } else {
+        map.setLevel(3);
+        map.setCenter(store.coords);
+      }
+    }
+
+    function createInfoWindowContent(store, region) {
+      const statusInfo = getStoreStatus(store);
+
+      return `
+        &lt;div class=&quot;info-box&quot;&gt;
+          &lt;button type=&quot;button&quot; class=&quot;info-window-close&quot; onclick=&quot;handleInfoWindowClose()&quot;&gt;×&lt;/button&gt;
+          &lt;h3&gt;${store.name}&lt;/h3&gt;
+          &lt;div&gt;&lt;strong&gt;주소&lt;/strong&gt; &lt;span&gt;${store.address || &quot;-&quot;}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;상세주소&lt;/strong&gt; &lt;span&gt;${store.detail_address || &quot;-&quot;}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;안내&lt;/strong&gt; &lt;span&gt;${statusInfo.message}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;운영요일&lt;/strong&gt; &lt;span&gt;${store.operating_days || &quot;-&quot;}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;운영시간&lt;/strong&gt; &lt;span&gt;${store.operating_hours || &quot;-&quot;}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;브레이크&lt;/strong&gt; &lt;span&gt;${store.break_time || &quot;-&quot;}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;전화&lt;/strong&gt; &lt;span&gt;${store.phone || &quot;-&quot;}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;확인용&lt;/strong&gt; &lt;span&gt;${store.brand || &quot;-&quot;}&lt;/span&gt;&lt;/div&gt;
+          &lt;div&gt;&lt;strong&gt;비고&lt;/strong&gt; &lt;span&gt;${store.note || &quot;-&quot;}&lt;/span&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      `;
+    }
+
+    function openStoreInfo(store) {
+      if (!store || !store.marker) return;
+
+      if (!store.infowindow) {
+        store.infowindow = new kakao.maps.InfoWindow({
+          content: createInfoWindowContent(store, store.region),
+          removable: false
+        });
+      } else {
+        store.infowindow.setContent(createInfoWindowContent(store, store.region));
+      }
+
+      closeAllInfoWindows();
+      store.infowindow.open(map, store.marker);
+      openedInfowindow = store.infowindow;
+    }
+
+    async function selectStore(store) {
+      if (!store) return;
+
+      selectedStoreName = store.name;
+      renderSelectedStore(store);
+
+      if (!routeEndStore) {
+        routeEndStore = store;
+        renderRouteInfo();
+      }
+
+      const currentResults = getFilteredMarkerStores(getCurrentFilterValues());
+      renderStoreList(currentResults);
+
+      closeOpenedInfowindow();
+
+      await scrollMapIntoView();
+
+      setTimeout(() =&gt; {
+        moveMapToStore(store);
+        setTimeout(() =&gt; {
+          openStoreInfo(store);
+        }, 120);
+      }, 40);
+    }
+
+    function setSelectedAsStart() {
+      const selectedStore = getSelectedStoreData();
+      if (!selectedStore) {
+        alert(&quot;먼저 매장을 선택해 주세요.&quot;);
+        return;
+      }
+      routeStartStore = selectedStore;
+      renderRouteInfo();
+    }
+
+    function setSelectedAsEnd() {
+      const selectedStore = getSelectedStoreData();
+      if (!selectedStore) {
+        alert(&quot;먼저 매장을 선택해 주세요.&quot;);
+        return;
+      }
+      routeEndStore = selectedStore;
+      renderRouteInfo();
+    }
+
+    function clearRouteSelection() {
+      routeStartStore = null;
+      routeEndStore = null;
+      renderRouteInfo();
+    }
+
+    function applyFilters() {
+      if (storeMarkers.length === 0) {
+        alert(&quot;매장 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.&quot;);
+        return;
+      }
+
+      renderFilterOptions();
+      const current = getCurrentFilterValues();
+      const results = getFilteredMarkerStores(current);
+
+      closeAllInfoWindows();
+
+      if (!current.keyword &amp;&amp; !current.brand &amp;&amp; !current.region &amp;&amp; !current.openFilter) {
+        selectedStoreName = null;
+        updateMarkers(storeMarkers, false);
+        renderStoreList(storeMarkers);
+        renderDefaultMessage();
+        return;
+      }
+
+      if (results.length === 0) {
+        selectedStoreName = null;
+        updateMarkers([], false);
+        document.getElementById(&quot;storeList&quot;).innerHTML = &quot;&quot;;
+        renderNoResultMessage();
+        return;
+      }
+
+      if (selectedStoreName &amp;&amp; !results.some(store =&gt; store.name === selectedStoreName)) {
+        selectedStoreName = null;
+      }
+
+      updateMarkers(results, true);
+      renderStoreList(results);
+      renderResultMessage(results);
+    }
+
+    function resetFilters() {
+      document.getElementById(&quot;searchInput&quot;).value = &quot;&quot;;
+      document.getElementById(&quot;brandFilter&quot;).value = &quot;&quot;;
+      document.getElementById(&quot;regionFilter&quot;).value = &quot;&quot;;
+      document.getElementById(&quot;openFilter&quot;).value = &quot;&quot;;
+
+      selectedStoreName = null;
+      closeAllInfoWindows();
+      renderFilterOptions();
+      updateMarkers(storeMarkers, false);
+      renderStoreList(storeMarkers);
+      renderDefaultMessage();
+    }
+
+    function toggleSidebar() {
+      const toggleButton = document.getElementById(&quot;sidebarToggle&quot;);
+      sidebarEl.classList.toggle(&quot;collapsed&quot;);
+      toggleButton.textContent = sidebarEl.classList.contains(&quot;collapsed&quot;) ? &quot;필터 열기&quot; : &quot;필터 닫기&quot;;
+      relayoutMapSafely();
+    }
+
+    function openRoadviewAtPosition(position, titleText = &quot;로드뷰&quot;) {
+      const wrap = document.getElementById(&quot;roadviewWrap&quot;);
+      const toggleBtn = document.getElementById(&quot;roadviewToggle&quot;);
+      const title = document.getElementById(&quot;roadviewTitle&quot;);
+
+      roadviewClient.getNearestPanoId(position, 50, function(panoId) {
+        if (!panoId) {
+          alert(&quot;이 위치 근처에는 로드뷰가 없습니다.&quot;);
+          return;
+        }
+
+        title.textContent = titleText;
+        wrap.classList.add(&quot;open&quot;);
+        toggleBtn.textContent = &quot;로드뷰 닫기&quot;;
+        roadview.setPanoId(panoId, position);
+
+        setTimeout(() =&gt; {
+          roadview.relayout();
+        }, 100);
+      });
+    }
+
+    function openRoadviewForStore(store) {
+      currentRoadviewStore = store;
+      openRoadviewAtPosition(store.coords, `${store.name} 로드뷰`);
+    }
+
+    function closeRoadviewPanel() {
+      const wrap = document.getElementById(&quot;roadviewWrap&quot;);
+      const toggleBtn = document.getElementById(&quot;roadviewToggle&quot;);
+      wrap.classList.remove(&quot;open&quot;);
+      toggleBtn.textContent = &quot;로드뷰&quot;;
+    }
+
+    function toggleRoadviewPanel() {
+      const wrap = document.getElementById(&quot;roadviewWrap&quot;);
+
+      if (wrap.classList.contains(&quot;open&quot;)) {
+        closeRoadviewPanel();
+        return;
+      }
+
+      const selectedStore = getSelectedStoreData();
+      if (!selectedStore) {
+        alert(&quot;먼저 매장을 선택해 주세요.&quot;);
+        return;
+      }
+
+      openRoadviewForStore(selectedStore);
+    }
+
+    function toggleRoadviewSize() {
+      const wrap = document.getElementById(&quot;roadviewWrap&quot;);
+      const expandBtn = document.getElementById(&quot;roadviewExpandBtn&quot;);
+
+      isRoadviewExpanded = !isRoadviewExpanded;
+      wrap.classList.toggle(&quot;expanded&quot;, isRoadviewExpanded);
+      expandBtn.textContent = isRoadviewExpanded ? &quot;작게 보기&quot; : &quot;크게 보기&quot;;
+
+      setTimeout(() =&gt; {
+        roadview.relayout();
+      }, 200);
+    }
+
+    function createRoadviewPickerOverlay() {
+      const content = document.createElement(&quot;div&quot;);
+      content.className = &quot;roadview-picker-pin&quot;;
+
+      return new kakao.maps.CustomOverlay({
+        content,
+        position: map.getCenter(),
+        xAnchor: 0.5,
+        yAnchor: 1
+      });
+    }
+
+    function startRoadviewPickMode() {
+      isRoadviewPickMode = true;
+      isRoadviewPickerVisible = true;
+
+      const button = document.getElementById(&quot;roadviewPickToggle&quot;);
+      button.classList.add(&quot;active&quot;);
+      button.textContent = &quot;찍기 종료&quot;;
+
+      map.addOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);
+
+      if (!roadviewPickerOverlay) {
+        roadviewPickerOverlay = createRoadviewPickerOverlay();
+      }
+
+      roadviewPickerOverlay.setPosition(map.getCenter());
+      roadviewPickerOverlay.setMap(map);
+    }
+
+    function stopRoadviewPickMode() {
+      isRoadviewPickMode = false;
+      isRoadviewPickerVisible = false;
+
+      const button = document.getElementById(&quot;roadviewPickToggle&quot;);
+      button.classList.remove(&quot;active&quot;);
+      button.textContent = &quot;찍기&quot;;
+
+      map.removeOverlayMapTypeId(kakao.maps.MapTypeId.ROADVIEW);
+
+      if (roadviewPickerOverlay) {
+        roadviewPickerOverlay.setMap(null);
+      }
+    }
+
+    function toggleRoadviewPickMode() {
+      if (isRoadviewPickMode) {
+        stopRoadviewPickMode();
+      } else {
+        startRoadviewPickMode();
+      }
+    }
+
+    function resetMapData() {
+      markersBuildTaskId += 1;
+      closeAllInfoWindows();
+
+      storeMarkers.forEach(store =&gt; {
+        if (store.marker) store.marker.setMap(null);
+      });
+
+      storeMarkers = [];
+      openedInfowindow = null;
+      selectedStoreName = null;
+      currentRoadviewStore = null;
+      routeStartStore = null;
+      routeEndStore = null;
+
+      document.getElementById(&quot;storeList&quot;).innerHTML = &quot;&quot;;
+      renderDefaultMessage();
+      renderRouteInfo();
+    }
+
+    function hasValidCoords(store) {
+      return (
+        store.lat !== undefined &amp;&amp;
+        store.lng !== undefined &amp;&amp;
+        store.lat !== null &amp;&amp;
+        store.lng !== null &amp;&amp;
+        String(store.lat).trim() !== &quot;&quot; &amp;&amp;
+        String(store.lng).trim() !== &quot;&quot;
+      );
+    }
+
+    function buildStoreMarker(store, coords) {
+      const region = extractRegion(store.address);
+
+      const marker = new kakao.maps.Marker({
+        position: coords,
+        image: getMarkerImage(store)
+      });
+
+      marker.setMap(map);
+
+      const storeData = {
+        ...store,
+        region,
+        coords,
+        marker,
+        infowindow: null
+      };
+
+      kakao.maps.event.addListener(marker, &quot;click&quot;, function() {
+        selectStore(storeData);
+      });
+
+      storeMarkers.push(storeData);
+    }
+
+    function buildMarkersInChunks(validStores, chunkSize = 40) {
+      validStores.sort((a, b) =&gt; getPinPriority(a) - getPinPriority(b));
+
+      const taskId = markersBuildTaskId;
+      let index = 0;
+
+      function processChunk() {
+        if (taskId !== markersBuildTaskId) return;
+
+        const end = Math.min(index + chunkSize, validStores.length);
+
+        for (let i = index; i &lt; end; i++) {
+          const store = validStores[i];
+          const coords = new kakao.maps.LatLng(Number(store.lat), Number(store.lng));
+          buildStoreMarker(store, coords);
+        }
+
+        index = end;
+
+        if (index &lt; validStores.length) {
+          requestAnimationFrame(processChunk);
+        } else {
+          updateMarkers(storeMarkers, false);
+          relayoutMapSafely();
+        }
+      }
+
+      requestAnimationFrame(processChunk);
+    }
+
+    function initializeStores() {
+      resetMapData();
+      rebuildStoresForFilter();
+      renderMarkerLegend();
+
+      if (!stores.length) {
+        renderFilterOptions();
+        renderRouteInfo();
+        renderStoreList([]);
+        renderNoResultMessage();
+        return;
+      }
+
+      renderFilterOptions();
+      renderRouteInfo();
+      renderStoreList(storesForFilter);
+      renderDefaultMessage();
+
+      const validStores = stores.filter(hasValidCoords);
+      buildMarkersInChunks(validStores, 40);
+    }
+
+    async function loadStoresFromSheet() {
+      if (!SHEET_API_URL) {
+        alert(&quot;SHEET_API_URL을 먼저 입력해 주세요.&quot;);
+        return;
+      }
+
+      try {
+        const response = await fetch(SHEET_API_URL, { cache: &quot;no-store&quot; });
+        const data = await response.json();
+
+        stores = Array.isArray(data) ? data.map(store =&gt; ({
+          ...store,
+          detail_address: store.detail_address ?? &quot;&quot;,
+          operating_days: store.operating_days ?? &quot;&quot;,
+          operating_hours: store.operating_hours ?? store.hours ?? store.business_hours ?? &quot;&quot;,
+          break_time: store.break_time ?? store.breakTime ?? &quot;&quot;,
+          lat: store.lat ?? store.latitude ?? &quot;&quot;,
+          lng: store.lng ?? store.longitude ?? &quot;&quot;
+        })) : [];
+
+        initializeStores();
+      } catch (error) {
+        console.error(&quot;매장 데이터 불러오기 실패:&quot;, error);
+        alert(&quot;구글시트 매장 데이터를 불러오지 못했습니다.&quot;);
+      }
+    }
+
+    function startNavigationFromRoute() {
+      const destinationStore = routeEndStore || getSelectedStoreData();
+
+      if (!destinationStore) {
+        alert(&quot;도착지로 사용할 매장을 먼저 선택하거나 설정해 주세요.&quot;);
+        return;
+      }
+
+      if (!window.Kakao) {
+        alert(&quot;카카오 SDK가 로드되지 않았습니다.&quot;);
+        return;
+      }
+
+      if (!Kakao.isInitialized()) {
+        try {
+          Kakao.init(&quot;여기에_카카오_자바스크립트키&quot;);
+        } catch (error) {
+          console.error(error);
+          alert(&quot;카카오 SDK 초기화에 실패했습니다.&quot;);
+          return;
+        }
+      }
+
+      if (!Kakao.Navi || typeof Kakao.Navi.start !== &quot;function&quot;) {
+        alert(&quot;카카오내비 기능을 사용할 수 없습니다. SDK 설정을 확인해 주세요.&quot;);
+        return;
+      }
+
+      if (isMobileDevice()) {
+        const naviOptions = {
+          name: destinationStore.name,
+          x: Number(destinationStore.coords.getLng()),
+          y: Number(destinationStore.coords.getLat()),
+          coordType: &quot;wgs84&quot;,
+          vehicleType: 1,
+          rpOption: 100
+        };
+
+        if (routeStartStore) {
+          naviOptions.sX = Number(routeStartStore.coords.getLng());
+          naviOptions.sY = Number(routeStartStore.coords.getLat());
+        }
+
+        try {
+          Kakao.Navi.start(naviOptions);
+        } catch (error) {
+          console.error(&quot;Kakao.Navi.start error:&quot;, error);
+          alert(&quot;카카오내비 실행에 실패했습니다. 카카오 디벨로퍼스에 현재 접속 도메인이 등록되어 있는지 확인해 주세요.&quot;);
+        }
+      } else {
+        alert(&quot;카카오내비 길찾기는 모바일에서만 실행됩니다.&quot;);
+      }
+    }
+
+    kakao.maps.event.addListener(map, &quot;mousemove&quot;, function(mouseEvent) {
+      if (!isRoadviewPickMode || !roadviewPickerOverlay || !isRoadviewPickerVisible) return;
+      roadviewPickerOverlay.setPosition(mouseEvent.latLng);
+    });
+
+    kakao.maps.event.addListener(map, &quot;click&quot;, function(mouseEvent) {
+      if (!isRoadviewPickMode) return;
+
+      const clickedPosition = mouseEvent.latLng;
+
+      if (roadviewPickerOverlay) {
+        roadviewPickerOverlay.setPosition(clickedPosition);
+        roadviewPickerOverlay.setMap(null);
+      }
+
+      isRoadviewPickerVisible = false;
+      openRoadviewAtPosition(clickedPosition, &quot;선택 위치 로드뷰&quot;);
+    });
+
+    document.getElementById(&quot;searchInput&quot;).addEventListener(&quot;keyup&quot;, function(event) {
+      if (event.key === &quot;Enter&quot;) applyFilters();
+    });
+
+    window.addEventListener(&quot;load&quot;, function() {
+      relayoutMapSafely();
+    });
+
+    window.addEventListener(&quot;resize&quot;, function() {
+      relayoutMapSafely();
+    });
+
+    window.addEventListener(&quot;orientationchange&quot;, function() {
+      relayoutMapSafely();
+    });
+
+    document.addEventListener(&quot;visibilitychange&quot;, function() {
+      if (!document.hidden) relayoutMapSafely();
+    });
+
+    loadStoresFromSheet();
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;"></iframe>
+  </div>
+
+  <script>
+    function showMap(targetId) {
+      document.querySelectorAll('.map-frame').forEach(function(frame) {
+        frame.classList.toggle('active', frame.id === targetId);
+      });
+      document.getElementById('tab2').classList.toggle('active', targetId === 'map2');
+      document.getElementById('tab1').classList.toggle('active', targetId === 'map1');
+    }
+  </script>
+</body>
+</html>
